@@ -1,10 +1,16 @@
-body {
+body, html {
   margin: 0;
+  padding: 0;
   overflow: hidden;
   background: black;
+  font-family: 'Minecraft', monospace;
 }
 
-canvas {
+#gameCanvas {
   display: block;
+  margin: 0 auto;
+  background: black;
+  width: 100vw;
+  height: 100vh;
 }
 
