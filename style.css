@@ -1,17 +1,11 @@
-/* Minecraft-like pixel font */
-body, canvas {
+body {
   margin: 0;
-  padding: 0;
-  display: block;
-  background-color: black;
-  font-family: 'Press Start 2P', cursive;
-  color: white;
-  user-select: none;
+  overflow: hidden;
+  background: black;
 }
 
-#gameCanvas {
+canvas {
   display: block;
-  margin: 0 auto;
-  background-color: black;
-  border: 2px solid white;
+  margin: auto;
+  image-rendering: pixelated;
 }
