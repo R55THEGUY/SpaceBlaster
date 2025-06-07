@@ -1,11 +1,13 @@
 body {
   margin: 0;
-  overflow: hidden;
   background: black;
+  overflow: hidden;
 }
 
 canvas {
   display: block;
   margin: auto;
+  background: black;
   image-rendering: pixelated;
+  border: 2px solid #fff;
 }
