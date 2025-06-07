@@ -1,16 +1,17 @@
-body, html {
+/* Minecraft-like pixel font */
+body, canvas {
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  background: black;
-  font-family: 'Minecraft', monospace;
+  display: block;
+  background-color: black;
+  font-family: 'Press Start 2P', cursive;
+  color: white;
+  user-select: none;
 }
 
 #gameCanvas {
   display: block;
   margin: 0 auto;
-  background: black;
-  width: 100vw;
-  height: 100vh;
+  background-color: black;
+  border: 2px solid white;
 }
-
