@@ -1,8 +1,14 @@
+@font-face {
+  font-family: 'Minecraft';
+  src: url('assets/fonts/Minecraftia.woff2') format('woff2');
+}
+
 body {
   margin: 0;
   background: black;
-  overflow: hidden;
+  font-family: 'Minecraft', sans-serif;
 }
+
 canvas {
   display: block;
   margin: auto;
