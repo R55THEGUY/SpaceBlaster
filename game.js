@@ -1,5 +1,5 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
 const ASSETS = {
   bg: "assets/bg.png",
@@ -9,167 +9,169 @@ const ASSETS = {
   bullet: "assets/bullet.png"
 };
 
-const keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+let images = {};
+let keys = {};
+let bullets = [];
+let enemies = [];
+let explosions = [];
 
-const loadImage = src => new Promise(res => {
-  const img = new Image();
-  img.src = src;
-  img.onload = () => res(img);
+let player = { x: 400, y: 500, width: 0, height: 0, frame: 1 };
+let speed = 4;
+let lastShot = 0;
+let score = 0;
+let isGameOver = false;
+let lastEnemySpawn = 0;
+
+// Load images
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+  });
+}
+
+function resetGame() {
+  player.x = 400;
+  bullets = [];
+  enemies = [];
+  explosions = [];
+  score = 0;
+  isGameOver = false;
+}
+
+// Handle keys
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+// Restart on click
+canvas.addEventListener("click", () => {
+  if (isGameOver) resetGame();
 });
 
-class Sprite {
-  constructor(img, frameWidth, frameCount, frameSpeed) {
-    this.img = img;
-    this.frameWidth = frameWidth;
-    this.frameHeight = img.height;
-    this.frameCount = frameCount;
-    this.frameSpeed = frameSpeed;
-    this.frame = 0;
-    this.time = 0;
+// Game loop
+function update(delta) {
+  if (isGameOver) return;
+
+  // Movement
+  if (keys['ArrowLeft']) {
+    player.x -= speed;
+    player.frame = 0;
+  } else if (keys['ArrowRight']) {
+    player.x += speed;
+    player.frame = 2;
+  } else {
+    player.frame = 1;
   }
 
-  update(dt) {
-    this.time += dt;
-    if (this.time > this.frameSpeed) {
-      this.time = 0;
-      this.frame = (this.frame + 1) % this.frameCount;
+  player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+
+  // Shooting
+  if (keys[' '] && Date.now() - lastShot > 300) {
+    bullets.push({ x: player.x + player.width / 2 - 5, y: player.y });
+    lastShot = Date.now();
+  }
+
+  // Move bullets
+  bullets = bullets.filter(b => b.y > -10);
+  bullets.forEach(b => b.y -= 8);
+
+  // Spawn enemies
+  if (Date.now() - lastEnemySpawn > 1000) {
+    enemies.push({ x: Math.random() * (canvas.width - 64), y: -64, frame: 0, timer: 0 });
+    lastEnemySpawn = Date.now();
+  }
+
+  // Move enemies
+  enemies.forEach(e => {
+    e.y += 2;
+    e.timer += delta;
+    e.frame = Math.floor((e.timer / 100) % 5);
+  });
+
+  // Check collisions
+  bullets.forEach((b, bi) => {
+    enemies.forEach((e, ei) => {
+      if (b.x < e.x + 64 && b.x + 10 > e.x && b.y < e.y + 64 && b.y + 10 > e.y) {
+        bullets.splice(bi, 1);
+        enemies.splice(ei, 1);
+        explosions.push({ x: e.x, y: e.y, frame: 0, timer: 0 });
+        score += 10;
+      }
+    });
+  });
+
+  // Check player collision
+  enemies.forEach(e => {
+    if (player.x < e.x + 64 && player.x + player.width > e.x && player.y < e.y + 64 && player.y + player.height > e.y) {
+      isGameOver = true;
     }
-  }
+  });
 
-  draw(x, y, frameOverride = null) {
-    const frame = frameOverride !== null ? frameOverride : this.frame;
-    ctx.drawImage(
-      this.img,
-      frame * this.frameWidth, 0,
-      this.frameWidth, this.frameHeight,
-      x, y,
-      this.frameWidth, this.frameHeight
-    );
+  // Explosion animation
+  explosions = explosions.filter(ex => ex.frame < 3);
+  explosions.forEach(ex => {
+    ex.timer += delta;
+    ex.frame = Math.floor(ex.timer / 100);
+  });
+}
+
+function draw() {
+  ctx.drawImage(images.bg, 0, 0, canvas.width, canvas.height);
+
+  // Draw player
+  ctx.drawImage(images.player, player.frame * 48, 0, 48, 48, player.x, player.y, player.width, player.height);
+
+  // Draw bullets
+  bullets.forEach(b => {
+    ctx.drawImage(images.bullet, b.x, b.y, 10, 20);
+  });
+
+  // Draw enemies
+  enemies.forEach(e => {
+    ctx.drawImage(images.enemy, e.frame * 64, 0, 64, 64, e.x, e.y, 64 * 1.6, 64 * 1.6);
+  });
+
+  // Draw explosions
+  explosions.forEach(ex => {
+    ctx.drawImage(images.explosion, ex.frame * 64, 0, 64, 64, ex.x, ex.y, 64, 64);
+  });
+
+  // Draw score
+  ctx.font = "20px Minecraft";
+  ctx.fillStyle = "white";
+  ctx.fillText("Score: " + score, 20, 30);
+
+  // Game Over
+  if (isGameOver) {
+    ctx.font = "50px Minecraft";
+    ctx.fillStyle = "red";
+    ctx.fillText("GAME OVER", canvas.width / 2 - 160, canvas.height / 2);
+    ctx.font = "20px Minecraft";
+    ctx.fillStyle = "white";
+    ctx.fillText("Click to Restart", canvas.width / 2 - 100, canvas.height / 2 + 40);
   }
 }
 
-(async function startGame() {
-  const [bgImg, playerImg, enemyImg, explosionImg, bulletImg] = await Promise.all([
-    loadImage(ASSETS.bg),
-    loadImage(ASSETS.player),
-    loadImage(ASSETS.enemy),
-    loadImage(ASSETS.explosion),
-    loadImage(ASSETS.bullet)
-  ]);
-
-  const playerSprite = new Sprite(playerImg, playerImg.width / 3, 3, 100);
-  const enemySprite = new Sprite(enemyImg, enemyImg.width / 5, 5, 100);
-  const explosionSprite = new Sprite(explosionImg, explosionImg.width / 3, 3, 50);
-
-  let player = {
-    x: 400,
-    y: 500,
-    speed: 200,
-    width: playerImg.width / 3,
-    height: playerImg.height
-  };
-
-  let bullets = [];
-  let enemies = [];
-  let explosions = [];
-
-  let lastTime = performance.now();
-  let shootCooldown = 0;
-
-  function spawnEnemy() {
-    enemies.push({
-      x: Math.random() * (canvas.width - enemySprite.frameWidth),
-      y: -enemySprite.frameHeight,
-      speed: 60 + Math.random() * 40
-    });
-  }
-
-  setInterval(spawnEnemy, 1000);
-
-  function update(dt) {
-    // Player movement
-    if (keys["ArrowLeft"]) player.x -= player.speed * dt;
-    if (keys["ArrowRight"]) player.x += player.speed * dt;
-    player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
-
-    // Player shooting
-    shootCooldown -= dt * 1000;
-    if (keys[" "] && shootCooldown <= 0) {
-      bullets.push({ x: player.x + player.width / 2 - 4, y: player.y });
-      shootCooldown = 300;
-    }
-
-    // Bullets
-    bullets = bullets.filter(b => b.y > -16);
-    bullets.forEach(b => b.y -= 400 * dt);
-
-    // Enemies
-    enemies = enemies.filter(e => e.y < canvas.height);
-    enemies.forEach(e => e.y += e.speed * dt);
-    enemySprite.update(dt * 1000);
-
-    // Explosions
-    explosions = explosions.filter(ex => ex.time < explosionSprite.frameCount * explosionSprite.frameSpeed);
-    explosions.forEach(ex => {
-      ex.time += dt * 1000;
-      ex.frame = Math.floor(ex.time / explosionSprite.frameSpeed);
-    });
-
-    // Collision detection
-    bullets.forEach((b, i) => {
-      enemies.forEach((e, j) => {
-        if (b.x < e.x + enemySprite.frameWidth &&
-            b.x + 8 > e.x &&
-            b.y < e.y + enemySprite.frameHeight &&
-            b.y + 16 > e.y) {
-          bullets.splice(i, 1);
-          enemies.splice(j, 1);
-          explosions.push({
-            x: e.x,
-            y: e.y,
-            frame: 0,
-            time: 0
-          });
-        }
-      });
-    });
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-
-    // Bullets
-    bullets.forEach(b => {
-      ctx.drawImage(bulletImg, b.x, b.y, 8, 16);
-    });
-
-    // Enemies
-    enemies.forEach(e => {
-      enemySprite.draw(e.x, e.y);
-    });
-
-    // Player
-    const movingLeft = keys["ArrowLeft"];
-    const movingRight = keys["ArrowRight"];
-    const frame = movingLeft ? 0 : movingRight ? 2 : 1;
-    playerSprite.draw(player.x, player.y, frame);
-
-    // Explosions
-    explosions.forEach(ex => {
-      explosionSprite.draw(ex.x, ex.y, ex.frame);
-    });
-  }
-
-  function loop(now) {
-    const dt = (now - lastTime) / 1000;
-    lastTime = now;
-    update(dt);
-    draw();
-    requestAnimationFrame(loop);
-  }
-
+// Main loop
+let last = performance.now();
+function loop(now) {
+  let delta = now - last;
+  update(delta);
+  draw();
+  last = now;
   requestAnimationFrame(loop);
-})();
+}
+
+// Load assets and start
+Promise.all(Object.entries(ASSETS).map(([key, path]) =>
+  loadImage(path).then(img => (images[key] = img))
+)).then(() => {
+  player.width = 48 * 1.8;
+  player.height = 48 * 1.8;
+  player.x = canvas.width / 2 - player.width / 2;
+  loop(performance.now());
+}).catch(err => {
+  console.error("Asset load error:", err);
+});
