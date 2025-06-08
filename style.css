@@ -1,13 +1,20 @@
+
+  /* Fullscreen landscape canvas */
 body, html {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: black;
-  }
-  
-  canvas {
-    display: block;
-    background: #111;
-    margin: 0 auto;
-  }
-  
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#gameCanvas {
+  background: #000;
+  display: block;
+  image-rendering: pixelated; /* crisp rendering */
+  width: 800px;
+  height: 450px; /* 16:9 aspect ratio */
+}
