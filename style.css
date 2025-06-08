@@ -1,8 +1,7 @@
 
-  /* Fullscreen landscape canvas */
-body, html {
+/* Make canvas fill full width in landscape style with fixed height */
+body {
   margin: 0;
-  padding: 0;
   overflow: hidden;
   background: black;
   display: flex;
@@ -11,10 +10,10 @@ body, html {
   height: 100vh;
 }
 
-#gameCanvas {
+canvas {
   background: #000;
   display: block;
-  image-rendering: pixelated; /* crisp rendering */
-  width: 800px;
-  height: 450px; /* 16:9 aspect ratio */
+  width: 960px; /* landscape width */
+  height: 540px; /* landscape height (16:9 ratio) */
+  image-rendering: pixelated; /* for crisp pixel art */
 }
