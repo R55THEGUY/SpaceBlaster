@@ -1,19 +1,16 @@
-
-/* Make canvas fill full width in landscape style with fixed height */
-body {
+* {
   margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
   overflow: hidden;
   background: black;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
 }
 
 canvas {
-  background: #000;
   display: block;
-  width: 960px; /* landscape width */
-  height: 540px; /* landscape height (16:9 ratio) */
-  image-rendering: pixelated; /* for crisp pixel art */
+  width: 100vw;
+  height: 100vh;
 }
