@@ -4,11 +4,20 @@ ctx.imageSmoothingEnabled = false;
 
 const keys = {};
 
-const bgImg = new Image(); bgImg.src = 'assets/bg.png';
-const playerImg = new Image(); playerImg.src = 'assets/player.png';
-const enemyImg = new Image(); enemyImg.src = 'assets/enemy.png';
-const explosionImg = new Image(); explosionImg.src = 'assets/explosion.png';
-const bulletImg = new Image(); bulletImg.src = 'assets/bullet.png';
+const bgImg = new Image();
+bgImg.src = 'assets/bg.png';
+
+const playerImg = new Image();
+playerImg.src = 'assets/player.png';
+
+const enemyImg = new Image();
+enemyImg.src = 'assets/enemy.png';
+
+const explosionImg = new Image();
+explosionImg.src = 'assets/explosion.png';
+
+const bulletImg = new Image();
+bulletImg.src = 'assets/bullet.png';
 
 document.addEventListener('keydown', e => keys[e.key] = true);
 document.addEventListener('keyup', e => keys[e.key] = false);
@@ -154,7 +163,20 @@ function initGame() {
   score = 0;
   gameOver = false;
 }
-initGame();
+  
+// Load images before starting the game loop
+const imagesToLoad = [bgImg, playerImg, enemyImg, explosionImg, bulletImg];
+let imagesLoaded = 0;
+
+imagesToLoad.forEach(img => {
+  img.onload = () => {
+    imagesLoaded++;
+    if (imagesLoaded === imagesToLoad.length) {
+      initGame();
+      loop();
+    }
+  };
+});
 
 function spawnEnemy() {
   if (!gameOver) {
@@ -211,9 +233,9 @@ function draw() {
   if (gameOver) {
     ctx.fillStyle = 'red';
     ctx.font = '14px "Press Start 2P"';
-    ctx.fillText('GAME OVER', 90, canvas.height / 2 - 10);
+    ctx.fillText('GAME OVER', 50, canvas.height / 2 - 10);
     ctx.font = '10px "Press Start 2P"';
-    ctx.fillText('Press R to Restart', 50, canvas.height / 2 + 20);
+    ctx.fillText('Press R to Restart', 20, canvas.height / 2 + 20);
   }
 }
 
@@ -222,7 +244,6 @@ function loop() {
   draw();
   requestAnimationFrame(loop);
 }
-loop();
 
 document.addEventListener('keydown', e => {
   if (gameOver && e.key === 'r') {
