@@ -1,195 +1,227 @@
-const canvas = document.getElementById('gameCanvas');
+const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
 const keys = {};
-const assets = {};
-let bullets = [], enemies = [], explosions = [];
 
-let score = 0;
-let gameOver = false;
-let lastShot = 0;
-const shootDelay = 250;
+// Load textures from assets
+const bgImg = new Image(); bgImg.src = 'assets/bg.png';
+const playerImg = new Image(); playerImg.src = 'assets/player.png';
+const enemyImg = new Image(); enemyImg.src = 'assets/enemy.png';
+const explosionImg = new Image(); explosionImg.src = 'assets/explosion.png';
+const bulletImg = new Image(); bulletImg.src = 'assets/bullet.png';
 
-const player = {
-  x: canvas.width / 2 - 24,
-  y: canvas.height - 60,
-  width: 24,
-  height: 9,
-  frame: 1,
-  speed: 4
-};
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
 
-function loadAssets(callback) {
-  const sources = {
-    player: 'assets/player.png',
-    enemy: 'assets/enemy.png',
-    explosion: 'assets/explosion.png',
-    bullet: 'assets/bullet.png',
-    bg: 'assets/bg.png'
-  };
+class Sprite {
+  constructor(img, frameWidth, frameHeight, frameCount, frameSpeed) {
+    this.img = img;
+    this.frameWidth = frameWidth;
+    this.frameHeight = frameHeight;
+    this.frameCount = frameCount;
+    this.frameSpeed = frameSpeed;
+    this.frameIndex = 0;
+    this.counter = 0;
+  }
 
-  let loaded = 0, total = Object.keys(sources).length;
-  for (let key in sources) {
-    assets[key] = new Image();
-    assets[key].src = sources[key];
-    assets[key].onload = () => ++loaded === total && callback();
+  update() {
+    this.counter++;
+    if (this.counter >= this.frameSpeed) {
+      this.counter = 0;
+      this.frameIndex = (this.frameIndex + 1) % this.frameCount;
+    }
+  }
+
+  draw(x, y) {
+    ctx.drawImage(
+      this.img,
+      this.frameIndex * this.frameWidth, 0,
+      this.frameWidth, this.frameHeight,
+      x, y,
+      this.frameWidth, this.frameHeight
+    );
   }
 }
+
+class Player {
+  constructor() {
+    this.sprite = new Sprite(playerImg, 48, 48, 3, 10);
+    this.x = canvas.width / 2 - 24;
+    this.y = canvas.height - 60;
+    this.speed = 4;
+    this.cooldown = 0;
+  }
+
+  update() {
+    if (keys['ArrowLeft']) this.x -= this.speed;
+    if (keys['ArrowRight']) this.x += this.speed;
+    this.x = Math.max(0, Math.min(canvas.width - 48, this.x));
+
+    this.sprite.update();
+
+    this.cooldown--;
+    if (keys[' '] && this.cooldown <= 0) {
+      bullets.push(new Bullet(this.x + 22, this.y));
+      this.cooldown = 15;
+    }
+  }
+
+  draw() {
+    this.sprite.draw(this.x, this.y);
+  }
+}
+
+class Bullet {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.speed = 6;
+    this.width = 4;
+    this.height = 10;
+  }
+
+  update() {
+    this.y -= this.speed;
+  }
+
+  draw() {
+    ctx.drawImage(bulletImg, this.x, this.y, this.width, this.height);
+  }
+}
+
+class Enemy {
+  constructor(x, y) {
+    this.sprite = new Sprite(enemyImg, 48, 48, 5, 6);
+    this.x = x;
+    this.y = y;
+    this.speed = 2;
+    this.dead = false;
+  }
+
+  update() {
+    this.y += this.speed;
+    this.sprite.update();
+  }
+
+  draw() {
+    this.sprite.draw(this.x, this.y);
+  }
+
+  getRect() {
+    return { x: this.x, y: this.y, w: 48, h: 48 };
+  }
+}
+
+class Explosion {
+  constructor(x, y) {
+    this.sprite = new Sprite(explosionImg, 48, 48, 3, 6);
+    this.x = x;
+    this.y = y;
+    this.done = false;
+  }
+
+  update() {
+    this.sprite.update();
+    if (this.sprite.frameIndex === this.sprite.frameCount - 1) {
+      this.done = true;
+    }
+  }
+
+  draw() {
+    this.sprite.draw(this.x, this.y);
+  }
+}
+
+function rectsIntersect(r1, r2) {
+  return !(r2.x > r1.x + r1.w ||
+           r2.x + r2.w < r1.x ||
+           r2.y > r1.y + r1.h ||
+           r2.y + r2.h < r1.y);
+}
+
+// Game state
+let player, bullets, enemies, explosions;
+let score, gameOver;
+
+function initGame() {
+  player = new Player();
+  bullets = [];
+  enemies = [];
+  explosions = [];
+  score = 0;
+  gameOver = false;
+}
+initGame();
 
 function spawnEnemy() {
-  enemies.push({
-    x: Math.random() * (canvas.width - 42),
-    y: -40,
-    frame: 0,
-    frameCount: 5,
-    width: 42,
-    height: 8,
-    tick: 0
-  });
-}
-
-function shootBullet() {
-  const now = Date.now();
-  if (now - lastShot > shootDelay) {
-    bullets.push({ x: player.x + 10, y: player.y, width: 4, height: 10 });
-    lastShot = now;
+  if (!gameOver) {
+    const x = Math.random() * (canvas.width - 48);
+    enemies.push(new Enemy(x, -50));
   }
 }
+setInterval(spawnEnemy, 1000);
 
 function update() {
   if (gameOver) return;
 
-  if (keys['ArrowLeft']) {
-    player.x -= player.speed;
-    player.frame = 0;
-  } else if (keys['ArrowRight']) {
-    player.x += player.speed;
-    player.frame = 2;
-  } else {
-    player.frame = 1;
-  }
-
-  player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
-
-  if (keys[' ']) shootBullet();
-
-  bullets = bullets.filter(b => (b.y -= 6) > 0);
-
-  enemies.forEach(e => {
-    e.y += 2;
-    e.tick++;
-    if (e.tick % 10 === 0) e.frame = (e.frame + 1) % e.frameCount;
-  });
-
-  enemies = enemies.filter(e => e.y < canvas.height);
+  player.update();
+  bullets.forEach(b => b.update());
+  enemies.forEach(e => e.update());
+  explosions.forEach(ex => ex.update());
 
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
-      if (
-        b.x < e.x + e.width &&
-        b.x + b.width > e.x &&
-        b.y < e.y + e.height &&
-        b.y + b.height > e.y
-      ) {
+      if (!e.dead && rectsIntersect({ x: b.x, y: b.y, w: 4, h: 10 }, e.getRect())) {
+        e.dead = true;
         bullets.splice(bi, 1);
-        enemies.splice(ei, 1);
-        explosions.push({ x: e.x, y: e.y, frame: 0, tick: 0 });
-        score += 100;
+        explosions.push(new Explosion(e.x, e.y));
+        score += 10;
       }
     });
   });
 
-  explosions.forEach(ex => {
-    ex.tick++;
-    if (ex.tick % 6 === 0) ex.frame++;
-  });
-  explosions = explosions.filter(ex => ex.frame < 3);
-
-  enemies.forEach(e => {
-    if (
-      e.x < player.x + player.width &&
-      e.x + e.width > player.x &&
-      e.y < player.y + player.height &&
-      e.y + e.height > player.y
-    ) {
+  for (const enemy of enemies) {
+    if (!enemy.dead && enemy.y > canvas.height - 48) {
       gameOver = true;
+      break;
     }
-  });
+  }
 
-  if (Math.random() < 0.02) spawnEnemy();
+  enemies = enemies.filter(e => !e.dead && e.y < canvas.height);
+  explosions = explosions.filter(e => !e.done);
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(assets.bg, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+  player.draw();
+  bullets.forEach(b => b.draw());
+  enemies.forEach(e => e.draw());
+  explosions.forEach(ex => ex.draw());
 
-  // Draw player
-  ctx.drawImage(
-    assets.player,
-    player.frame * player.width,
-    0,
-    player.width,
-    player.height,
-    player.x,
-    player.y,
-    player.width * 2,
-    player.height * 2
-  );
-
-  // Bullets
-  bullets.forEach(b => {
-    ctx.drawImage(assets.bullet, b.x, b.y, b.width, b.height);
-  });
-
-  // Enemies
-  enemies.forEach(e => {
-    ctx.drawImage(
-      assets.enemy,
-      e.frame * e.width,
-      0,
-      e.width,
-      e.height,
-      e.x,
-      e.y,
-      e.width * 2,
-      e.height * 2
-    );
-  });
-
-  // Explosions
-  explosions.forEach(ex => {
-    ctx.drawImage(
-      assets.explosion,
-      ex.frame * 23,
-      0,
-      23,
-      8,
-      ex.x,
-      ex.y,
-      46,
-      16
-    );
-  });
-
-  ctx.fillStyle = "#fff";
-  ctx.font = "20px 'Minecraftia', monospace";
-  ctx.fillText("Score: " + score, 10, 30);
+  ctx.fillStyle = 'white';
+  ctx.font = '12px "Press Start 2P"';
+  ctx.fillText('Score: ' + score, 10, 20);
 
   if (gameOver) {
-    ctx.fillStyle = "red";
-    ctx.font = "30px 'Minecraftia', monospace";
-    ctx.fillText("GAME OVER", canvas.width / 2 - 120, canvas.height / 2);
+    ctx.fillStyle = 'red';
+    ctx.font = '14px "Press Start 2P"';
+    ctx.fillText('GAME OVER', 90, canvas.height / 2 - 10);
+    ctx.font = '10px "Press Start 2P"';
+    ctx.fillText('Press R to Restart', 50, canvas.height / 2 + 20);
   }
 }
 
-function gameLoop() {
+function loop() {
   update();
   draw();
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(loop);
 }
+loop();
 
-window.addEventListener('keydown', e => keys[e.key] = true);
-window.addEventListener('keyup', e => keys[e.key] = false);
-
-loadAssets(gameLoop);
+document.addEventListener('keydown', e => {
+  if (gameOver && e.key === 'r') {
+    initGame();
+  }
+});
