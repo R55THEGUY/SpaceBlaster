@@ -4,7 +4,6 @@ ctx.imageSmoothingEnabled = false;
 
 const keys = {};
 
-// Load textures from assets
 const bgImg = new Image(); bgImg.src = 'assets/bg.png';
 const playerImg = new Image(); playerImg.src = 'assets/player.png';
 const enemyImg = new Image(); enemyImg.src = 'assets/enemy.png';
@@ -46,9 +45,9 @@ class Sprite {
 
 class Player {
   constructor() {
-    this.sprite = new Sprite(playerImg, 48, 48, 3, 10);
-    this.x = canvas.width / 2 - 24;
-    this.y = canvas.height - 60;
+    this.sprite = new Sprite(playerImg, 24, 9, 3, 10);
+    this.x = canvas.width / 2 - 12;
+    this.y = canvas.height - 30;
     this.speed = 4;
     this.cooldown = 0;
   }
@@ -56,14 +55,13 @@ class Player {
   update() {
     if (keys['ArrowLeft']) this.x -= this.speed;
     if (keys['ArrowRight']) this.x += this.speed;
-    this.x = Math.max(0, Math.min(canvas.width - 48, this.x));
-
+    this.x = Math.max(0, Math.min(canvas.width - 24, this.x));
     this.sprite.update();
 
     this.cooldown--;
     if (keys[' '] && this.cooldown <= 0) {
-      bullets.push(new Bullet(this.x + 22, this.y));
-      this.cooldown = 15;
+      bullets.push(new Bullet(this.x + 10, this.y));
+      this.cooldown = 12;
     }
   }
 
@@ -92,7 +90,7 @@ class Bullet {
 
 class Enemy {
   constructor(x, y) {
-    this.sprite = new Sprite(enemyImg, 48, 48, 5, 6);
+    this.sprite = new Sprite(enemyImg, 42, 8, 5, 6);
     this.x = x;
     this.y = y;
     this.speed = 2;
@@ -109,13 +107,13 @@ class Enemy {
   }
 
   getRect() {
-    return { x: this.x, y: this.y, w: 48, h: 48 };
+    return { x: this.x, y: this.y, w: 42, h: 8 };
   }
 }
 
 class Explosion {
   constructor(x, y) {
-    this.sprite = new Sprite(explosionImg, 48, 48, 3, 6);
+    this.sprite = new Sprite(explosionImg, 23, 8, 3, 6);
     this.x = x;
     this.y = y;
     this.done = false;
@@ -140,7 +138,6 @@ function rectsIntersect(r1, r2) {
            r2.y + r2.h < r1.y);
 }
 
-// Game state
 let player, bullets, enemies, explosions;
 let score, gameOver;
 
@@ -156,7 +153,7 @@ initGame();
 
 function spawnEnemy() {
   if (!gameOver) {
-    const x = Math.random() * (canvas.width - 48);
+    const x = Math.random() * (canvas.width - 42);
     enemies.push(new Enemy(x, -50));
   }
 }
@@ -201,26 +198,15 @@ function draw() {
   explosions.forEach(ex => ex.draw());
 
   ctx.fillStyle = 'white';
-  ctx.font = '12px "Press Start 2P"';
+  ctx.font = '12px \"Press Start 2P\"';
   ctx.fillText('Score: ' + score, 10, 20);
 
   if (gameOver) {
     ctx.fillStyle = 'red';
-    ctx.font = '14px "Press Start 2P"';
+    ctx.font = '14px \"Press Start 2P\"';
     ctx.fillText('GAME OVER', 90, canvas.height / 2 - 10);
-    ctx.font = '10px "Press Start 2P"';
-    ctx.fillText('Press R to Restart', 50, canvas.height / 2 + 20);
-  }
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-loop();
-
-document.addEventListener('keydown', e => {
+    ctx.font = '10px \"Press Start 2P\"';
+   {
   if (gameOver && e.key === 'r') {
     initGame();
   }
