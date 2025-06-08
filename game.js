@@ -11,9 +11,9 @@ const enemySprite = new Image();
 const explosionSprite = new Image();
 
 // Replace these paths with your actual sprite sheet paths or URLs
-playerSprite.src = 'player_sprites.png';    // player: 3 frames: left, idle, right (24x9 each frame)
-enemySprite.src = 'enemy_sprites.png';      // enemy: 5 frames (40x8 each frame)
-explosionSprite.src = 'explosion_sprites.png'; // explosion: 3 frames (24x8 each frame)
+playerSprite.src = 'player.png';    // player: 3 frames: left, idle, right (24x9 each frame)
+enemySprite.src = 'enemy.png';      // enemy: 5 frames (40x8 each frame)
+explosionSprite.src = 'explosion.png'; // explosion: 3 frames (24x8 each frame)
 
 // Player settings
 const PLAYER_WIDTH = 24;
