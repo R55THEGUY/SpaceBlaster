@@ -100,6 +100,11 @@ class Enemy {
   update() {
     this.y += this.speed;
     this.sprite.update();
+
+    // Clamp horizontal position inside canvas
+    if (this.x < 0) this.x = 0;
+    if (this.x > canvas.width - this.sprite.frameWidth)
+      this.x = canvas.width - this.sprite.frameWidth;
   }
 
   draw() {
@@ -179,7 +184,8 @@ function update() {
   });
 
   for (const enemy of enemies) {
-    if (!enemy.dead && enemy.y > canvas.height - 48) {
+    // Game over only if enemy reaches bottom of canvas
+    if (!enemy.dead && enemy.y + enemy.sprite.frameHeight >= canvas.height) {
       gameOver = true;
       break;
     }
@@ -187,6 +193,7 @@ function update() {
 
   enemies = enemies.filter(e => !e.dead && e.y < canvas.height);
   explosions = explosions.filter(e => !e.done);
+  bullets = bullets.filter(b => b.y + b.height > 0);
 }
 
 function draw() {
@@ -198,15 +205,26 @@ function draw() {
   explosions.forEach(ex => ex.draw());
 
   ctx.fillStyle = 'white';
-  ctx.font = '12px \"Press Start 2P\"';
+  ctx.font = '12px "Press Start 2P"';
   ctx.fillText('Score: ' + score, 10, 20);
 
   if (gameOver) {
     ctx.fillStyle = 'red';
-    ctx.font = '14px \"Press Start 2P\"';
+    ctx.font = '14px "Press Start 2P"';
     ctx.fillText('GAME OVER', 90, canvas.height / 2 - 10);
-    ctx.font = '10px \"Press Start 2P\"';
-   {
+    ctx.font = '10px "Press Start 2P"';
+    ctx.fillText('Press R to Restart', 50, canvas.height / 2 + 20);
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+document.addEventListener('keydown', e => {
   if (gameOver && e.key === 'r') {
     initGame();
   }
