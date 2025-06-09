@@ -1,149 +1,145 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const playerImage = new Image();
+playerImage.src = 'player.png';
 
-const PLAYER_WIDTH = 24;
-const PLAYER_HEIGHT = 9;
-const ENEMY_WIDTH = 40;
-const ENEMY_HEIGHT = 8;
-const EXPLOSION_WIDTH = 24;
-const EXPLOSION_HEIGHT = 8;
+const enemyImage = new Image();
+enemyImage.src = 'enemy.png';
 
-const SCALE = 3;
-const SPEED = 5;
+const explosionImage = new Image();
+explosionImage.src = 'explosion.png';
 
 let keys = {};
-document.addEventListener("keydown", (e) => keys[e.key] = true);
-document.addEventListener("keyup", (e) => keys[e.key] = false);
-
-let player = {
-  x: canvas.width / 2,
-  y: canvas.height - 100,
-  frame: 1,
-  direction: "idle"
-};
-
-let enemies = [];
 let bullets = [];
+let enemies = [];
 let explosions = [];
 
-const playerImg = new Image();
-playerImg.src = 'player.png';
+let player = {
+  x: 100,
+  y: 500,
+  width: 8,
+  height: 8,
+  speed: 3,
+  direction: 'idle',
+  frame: 1,
+  frameTick: 0,
+  shoot: function () {
+    bullets.push({ x: this.x + this.width / 2 - 1, y: this.y, speed: 5 });
+  }
+};
 
-const enemyImg = new Image();
-enemyImg.src = 'enemy.png';
+// Mobile controls
+document.getElementById('leftBtn').addEventListener('touchstart', () => keys['ArrowLeft'] = true);
+document.getElementById('leftBtn').addEventListener('touchend', () => keys['ArrowLeft'] = false);
+document.getElementById('rightBtn').addEventListener('touchstart', () => keys['ArrowRight'] = true);
+document.getElementById('rightBtn').addEventListener('touchend', () => keys['ArrowRight'] = false);
+document.getElementById('shootBtn').addEventListener('touchstart', () => player.shoot());
 
-const explosionImg = new Image();
-explosionImg.src = 'explosion.png';
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
 
 function spawnEnemy() {
   enemies.push({
-    x: Math.random() * (canvas.width - ENEMY_WIDTH * SCALE),
-    y: -ENEMY_HEIGHT * SCALE,
-    frame: 0
+    x: Math.random() * (canvas.width - 8),
+    y: 0,
+    width: 8,
+    height: 8,
+    frame: 0,
+    frameTick: 0
   });
 }
-
-function shootBullet() {
-  bullets.push({
-    x: player.x + (PLAYER_WIDTH * SCALE) / 2 - 2,
-    y: player.y,
-  });
-}
-
-let lastShot = 0;
 
 function update() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Move player
-  if (keys["ArrowLeft"] || keys["a"]) {
-    player.x -= SPEED;
-    player.direction = "left";
-  } else if (keys["ArrowRight"] || keys["d"]) {
-    player.x += SPEED;
-    player.direction = "right";
+  // Player movement
+  if (keys['ArrowLeft']) {
+    player.x -= player.speed;
+    player.direction = 'left';
+  } else if (keys['ArrowRight']) {
+    player.x += player.speed;
+    player.direction = 'right';
   } else {
-    player.direction = "idle";
+    player.direction = 'idle';
   }
 
-  player.x = Math.max(0, Math.min(canvas.width - PLAYER_WIDTH * SCALE, player.x));
+  player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
 
-  // Draw player
-  let frame = player.direction === "left" ? 0 : player.direction === "right" ? 2 : 1;
-  ctx.drawImage(
-    playerImg,
-    frame * PLAYER_WIDTH, 0, PLAYER_WIDTH, PLAYER_HEIGHT,
-    player.x, player.y, PLAYER_WIDTH * SCALE, PLAYER_HEIGHT * SCALE
-  );
-
-  // Shooting
-  if (keys[" "] && Date.now() - lastShot > 300) {
-    shootBullet();
-    lastShot = Date.now();
-  }
-
-  // Update bullets
+  // Bullets
   bullets = bullets.filter(b => b.y > 0);
-  for (let bullet of bullets) {
-    bullet.y -= 10;
-    ctx.fillStyle = 'red';
-    ctx.fillRect(bullet.x, bullet.y, 4, 10);
-  }
+  bullets.forEach(b => b.y -= b.speed);
 
-  // Update enemies
-  enemies = enemies.filter(e => e.y < canvas.height);
-  for (let enemy of enemies) {
-    enemy.y += 2;
-    enemy.frame = (enemy.frame + 1) % 5;
-    ctx.drawImage(
-      enemyImg,
-      enemy.frame * ENEMY_WIDTH, 0, ENEMY_WIDTH, ENEMY_HEIGHT,
-      enemy.x, enemy.y, ENEMY_WIDTH * SCALE, ENEMY_HEIGHT * SCALE
-    );
-
-    // Check for wall collision
-    if (enemy.y + ENEMY_HEIGHT * SCALE > player.y + PLAYER_HEIGHT * SCALE) {
-      alert("Game Over");
-      document.location.reload();
+  // Enemies
+  enemies.forEach(e => {
+    e.y += 1;
+    e.frameTick++;
+    if (e.frameTick > 10) {
+      e.frame = (e.frame + 1) % 5;
+      e.frameTick = 0;
     }
-  }
+  });
 
-  // Check bullet collision
-  bullets.forEach((bullet, bIndex) => {
-    enemies.forEach((enemy, eIndex) => {
+  // Collisions
+  bullets.forEach((b, bi) => {
+    enemies.forEach((e, ei) => {
       if (
-        bullet.x < enemy.x + ENEMY_WIDTH * SCALE &&
-        bullet.x + 4 > enemy.x &&
-        bullet.y < enemy.y + ENEMY_HEIGHT * SCALE &&
-        bullet.y + 10 > enemy.y
+        b.x < e.x + e.width &&
+        b.x + 2 > e.x &&
+        b.y < e.y + e.height &&
+        b.y + 4 > e.y
       ) {
-        bullets.splice(bIndex, 1);
-        enemies.splice(eIndex, 1);
-        explosions.push({
-          x: enemy.x,
-          y: enemy.y,
-          frame: 0
-        });
+        explosions.push({ x: e.x, y: e.y, frame: 0, tick: 0 });
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
       }
     });
   });
 
-  // Update explosions
-  explosions = explosions.filter(e => e.frame < 3);
-  for (let explosion of explosions) {
-    ctx.drawImage(
-      explosionImg,
-      explosion.frame * EXPLOSION_WIDTH, 0, EXPLOSION_WIDTH, EXPLOSION_HEIGHT,
-      explosion.x, explosion.y, EXPLOSION_WIDTH * SCALE, EXPLOSION_HEIGHT * SCALE
-    );
-    explosion.frame += 0.2;
-  }
+  // Explosions
+  explosions = explosions.filter(ex => ex.frame < 3);
+  explosions.forEach(ex => {
+    ex.tick++;
+    if (ex.tick > 5) {
+      ex.frame++;
+      ex.tick = 0;
+    }
+  });
 
-  requestAnimationFrame(update);
+  // Player animation frame
+  player.frameTick++;
+  if (player.frameTick > 10) {
+    if (player.direction === 'left') player.frame = 0;
+    else if (player.direction === 'idle') player.frame = 1;
+    else if (player.direction === 'right') player.frame = 2;
+    player.frameTick = 0;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw player
+  ctx.drawImage(playerImage, player.frame * 8, 0, 8, 8, player.x, player.y, 32, 32);
+
+  // Draw bullets
+  ctx.fillStyle = 'red';
+  bullets.forEach(b => ctx.fillRect(b.x, b.y, 2, 4));
+
+  // Draw enemies
+  enemies.forEach(e => {
+    ctx.drawImage(enemyImage, e.frame * 8, 0, 8, 8, e.x, e.y, 32, 32);
+  });
+
+  // Draw explosions
+  explosions.forEach(ex => {
+    ctx.drawImage(explosionImage, ex.frame * 8, 0, 8, 8, ex.x, ex.y, 32, 32);
+  });
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
 }
 
 setInterval(spawnEnemy, 1000);
-window.onload = update;
+gameLoop();
