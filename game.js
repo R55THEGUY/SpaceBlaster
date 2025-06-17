@@ -20,6 +20,19 @@ enemyImage.src = 'enemy.png';   // Make sure enemy.png is in the same directory
 const explosionImage = new Image();
 explosionImage.src = 'explosion.png'; // Make sure explosion.png is in the same directory
 
+// --- Audio Assets ---
+const shootSound = new Audio('shoot.mp3'); // Path to your shoot sound
+const explosionSound = new Audio('explosion.mp3'); // Path to your explosion sound
+const gameOverSound = new Audio('game_over.mp3'); // Path to your game over sound
+const tapSound = new Audio('tap.mp3'); // New: Path to your button tap sound
+
+// Set initial volume (0 to 1)
+shootSound.volume = 0.3; // Adjust as needed
+explosionSound.volume = 0.5; // Adjust as needed
+gameOverSound.volume = 0.7; // Adjust game over sound volume
+tapSound.volume = 0.2; // New: Adjust tap sound volume (keep it subtle)
+
+
 // Game states
 const GAME_STATE_MENU = 'menu';
 const GAME_STATE_PLAYING = 'playing';
@@ -61,6 +74,9 @@ const player = {
             y: this.y,
             speed: 5
         });
+        // Play shoot sound
+        shootSound.currentTime = 0; // Rewind to start for quick playback
+        shootSound.play().catch(e => console.error("Shoot sound play error:", e));
     }
   }
 };
@@ -126,6 +142,10 @@ function showGameOverScreen() {
     // Stop all game activities
     clearInterval(enemySpawnIntervalId);
     cancelAnimationFrame(gameLoopId);
+
+    // Play game over sound
+    gameOverSound.currentTime = 0; // Rewind to start
+    gameOverSound.play().catch(e => console.error("Game Over sound play error:", e));
 }
 
 // --- Game Setup and Reset ---
@@ -168,12 +188,19 @@ document.addEventListener('keyup', e => {
   keys[e.key] = false;
 });
 
+// New: Function to play tap sound
+function playTapSound() {
+    tapSound.currentTime = 0; // Rewind to start
+    tapSound.play().catch(e => console.error("Tap sound play error:", e));
+}
+
 // --- Mobile Touch Controls ---
 function setupMobileControls() {
     if (leftButton) {
         leftButton.addEventListener('touchstart', (e) => {
             e.preventDefault(); // Prevent scrolling
             keys['ArrowLeft'] = true;
+            playTapSound(); // Play tap sound on press
         });
         leftButton.addEventListener('touchend', () => {
             keys['ArrowLeft'] = false;
@@ -183,15 +210,22 @@ function setupMobileControls() {
         rightButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             keys['ArrowRight'] = true;
+            playTapSound(); // Play tap sound on press
         });
         rightButton.addEventListener('touchend', () => {
             keys['ArrowRight'] = false;
         });
     }
     if (shootButton) {
+        // Use touchstart and touchend to simulate continuous press
         shootButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             keys[' '] = true; // Simulate spacebar press
+            // Note: Tap sound for shoot button is not ideal as it would conflict
+            // with the actual shoot sound. Omitting it here.
+            // If you want a *separate* tap sound for the button vs. the weapon,
+            // you could add it, but it might get noisy.
+            // playTapSound();
         });
         shootButton.addEventListener('touchend', () => {
             keys[' '] = false;
@@ -210,6 +244,7 @@ function toggleFullscreen() {
             document.exitFullscreen();
         }
     }
+    playTapSound(); // Play tap sound on fullscreen button click
 }
 
 
@@ -256,7 +291,7 @@ function update() {
     }
   }
 
-  // Continuous shooting while spacebar is held down
+  // Continuous shooting while spacebar is held down (or mobile shoot button)
   if (keys[' ']) {
     const currentTime = performance.now(); // Get current time for cooldown
     // Defensive check before calling player.shoot()
@@ -296,6 +331,9 @@ function update() {
       ) {
         // Collision detected:
         explosions.push({ x: e.x, y: e.y, frame: 0, tick: 0, scale: 4, width: 8, height: 8 });
+        explosionSound.currentTime = 0; // Rewind for quick playback
+        explosionSound.play().catch(e => console.error("Explosion sound play error:", e));
+
         enemies.splice(ei, 1);
         bullets.splice(bi, 1);
         score += 100;
@@ -313,7 +351,7 @@ function update() {
       if (
         player.x < e.x + e.width * e.scale &&
         player.x + player.width * player.scale > e.x &&
-        player.y < e.y + e.height * e.scale &&
+        player.y < e.y + player.height * player.scale &&
         player.y + player.height * player.scale > e.y
       ) {
         console.log("Player-Enemy Collision Detected!"); // Log collision
@@ -322,6 +360,9 @@ function update() {
         console.log("Player Lives AFTER:", playerLives); // Log lives after decrement
 
         explosions.push({ x: player.x, y: player.y, frame: 0, tick: 0, scale: 4, width: 8, height: 8 }); // Explosion at player
+        explosionSound.currentTime = 0; // Rewind for quick playback
+        explosionSound.play().catch(e => console.error("Player explosion sound play error:", e));
+
         enemies.splice(ei, 1); // Remove the enemy that hit the player
 
         if (playerLives <= 0) {
@@ -363,7 +404,8 @@ function draw() {
 
   if (currentGameState === GAME_STATE_PLAYING) {
     // Draw player (with blinking effect if invincible)
-    if (!player.isInvincible || (player.isInvincible && player.invincibilityTimer % 10 < 5)) { // Blinking effect
+    // Blinking effect should only happen IF player is invincible
+    if (!player.isInvincible || (player.isInvincible && player.invincibilityTimer % 10 < 5)) {
         ctx.drawImage(
             playerImage,
             player.frame * player.width, 0, player.width, player.height,
@@ -455,25 +497,32 @@ document.addEventListener('DOMContentLoaded', () => {
     gameOverScreen = document.getElementById('gameOverScreen');
     finalScoreDisplay = document.getElementById('finalScore');
     restartButton = document.getElementById('restartButton');
-    mobileControls = document.getElementById('mobileControls'); // Get mobile controls container
-    leftButton = document.getElementById('leftButton');       // Get mobile left button
-    rightButton = document.getElementById('rightButton');     // Get mobile right button
-    shootButton = document.getElementById('shootButton');     // Get mobile shoot button
-    fullscreenButton = document.getElementById('fullscreenButton'); // Get fullscreen button
+    // Correctly get references to mobile control elements
+    mobileControls = document.getElementById('mobileControls');
+    leftButton = document.getElementById('leftButton');
+    rightButton = document.getElementById('rightButton');
+    shootButton = document.getElementById('shootButton');
+    fullscreenButton = document.getElementById('fullscreenButton');
 
-    // Button click listeners
+    // Button click listeners - Now playing tap sound
     if (startButton) {
-        startButton.addEventListener('click', startGame);
+        startButton.addEventListener('click', () => {
+            playTapSound();
+            startGame();
+        });
     } else {
         console.error("ERROR: startButton element not found after DOMContentLoaded. Check index.html IDs.");
     }
     if (restartButton) {
-        restartButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', () => {
+            playTapSound();
+            startGame();
+        });
     } else {
         console.error("ERROR: restartButton element not found after DOMContentLoaded. Check index.html IDs.");
     }
     if (fullscreenButton) {
-        fullscreenButton.addEventListener('click', toggleFullscreen);
+        fullscreenButton.addEventListener('click', toggleFullscreen); // toggleFullscreen already plays sound
     } else {
         console.error("ERROR: fullscreenButton element not found after DOMContentLoaded. Check index.html IDs.");
     }
@@ -483,6 +532,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!gameOverScreen) console.error("ERROR: gameOverScreen element not found after DOMContentLoaded. Check index.html IDs.");
     if (!finalScoreDisplay) console.error("ERROR: finalScoreDisplay element not found after DOMContentLoaded. Check index.html IDs.");
     if (!mobileControls) console.error("ERROR: mobileControls element not found after DOMContentLoaded. Check index.html IDs.");
+    if (!leftButton) console.error("ERROR: leftButton element not found after DOMContentLoaded. Check index.html IDs.");
+    if (!rightButton) console.error("ERROR: rightButton element not found after DOMContentLoaded. Check index.html IDs.");
+    if (!shootButton) console.error("ERROR: shootButton element not found after DOMContentLoaded. Check index.html IDs.");
+
 
     // Setup mobile touch controls
     setupMobileControls();
