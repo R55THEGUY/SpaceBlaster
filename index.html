@@ -4,37 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Space Blaster</title>
-  <!-- Keeping the retro font for the title -->
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="game-container">
     <h1 class="game-title">SPACE BLASTER</h1>
 
-    <!-- Main Menu Screen -->
-    <!-- The 'hidden' class will be managed by JavaScript initially -->
     <div id="mainMenu" class="game-screen">
       <button id="startButton" class="button-primary">PLAY GAME</button>
+      <button id="fullscreenButton" class="button-primary fullscreen-button hidden-desktop">FULLSCREEN</button>
     </div>
 
-    <!-- Game Canvas -->
     <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-    <!-- Game Over Screen -->
-    <!-- Initially hidden, shown by JavaScript -->
     <div id="gameOverScreen" class="game-screen hidden">
       <h2 class="game-over-text">GAME OVER</h2>
       <p class="final-score">SCORE: <span id="finalScore">0</span></p>
       <button id="restartButton" class="button-primary">RESTART</button>
     </div>
+
+    <div id="mobileControls" class="mobile-controls hidden-desktop hidden">
+      <button id="leftButton" class="mobile-button control-button">◀</button>
+      <button id="shootButton" class="mobile-button action-button">FIRE</button>
+      <button id="rightButton" class="mobile-button control-button">▶</button>
+    </div>
+
   </div>
 
-  <!--
-    Placing the script tag at the end of the body ensures
-    the HTML elements are loaded before the script tries to access them.
-    The DOMContentLoaded listener in game.js further ensures this.
-  -->
+  <div id="portraitWarning" class="portrait-warning hidden-desktop hidden">
+    <p>Please rotate your device to landscape mode for the best experience!</p>
+  </div>
+
   <script src="game.js"></script>
 </body>
 </html>
