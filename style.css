@@ -21,7 +21,7 @@ body {
   background: linear-gradient(145deg, #1a2a3a, #0a111a); /* Subtle gradient background */
   border-radius: 15px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 0 5px rgba(255, 255, 255, 0.05); /* Outer glow */
-  position: relative; /* For absolute positioning of game screens */
+  position: relative; /* For absolute positioning of game screens and controls */
   min-width: 320px; /* Ensure responsiveness for smaller screens */
   width: 90vw; /* Use viewport width for better responsiveness */
   max-width: 840px; /* Max width to prevent it from getting too large */
@@ -72,7 +72,6 @@ canvas {
   align-items: center;
   z-index: 10; /* Ensure it's above the canvas */
   border-radius: 15px; /* Match container border-radius */
-  /* No padding-bottom here, content is centered, padding should be on buttons themselves */
   box-sizing: border-box; /* Include padding in width/height */
 }
 
@@ -107,7 +106,7 @@ canvas {
   border: 3px solid #00ffff; /* Cyan border */
   border-radius: 8px;
   /* Enhanced box-shadow for a more vibrant glow and depth */
-  box-shadow: 
+  box-shadow:
     0 0 15px rgba(0, 255, 255, 0.8), /* Outer glow */
     inset 0 0 8px rgba(0, 255, 255, 0.4), /* Inner subtle glow */
     0 5px 15px rgba(0, 0, 0, 0.5); /* Drop shadow for depth */
@@ -124,7 +123,7 @@ canvas {
   color: #ffffff; /* White text on hover */
   background: linear-gradient(145deg, #008f8f, #004f4f); /* Lighter cyan gradient */
   /* More intense glow on hover */
-  box-shadow: 
+  box-shadow:
     0 0 25px rgba(0, 255, 255, 1), /* Stronger outer glow */
     inset 0 0 12px rgba(0, 255, 255, 0.6), /* Stronger inner glow */
     0 8px 20px rgba(0, 0, 0, 0.6); /* Deeper drop shadow */
@@ -133,11 +132,126 @@ canvas {
 
 .button-primary:active {
   transform: translateY(0) scale(0.98); /* Press down effect */
-  box-shadow: 
+  box-shadow:
     0 0 10px rgba(0, 255, 255, 0.4), /* Reduced outer glow */
     inset 0 0 5px rgba(0, 255, 255, 0.2), /* Reduced inner glow */
     0 2px 5px rgba(0, 0, 0, 0.3); /* Lighter drop shadow */
   background: linear-gradient(145deg, #004f4f, #002f2f); /* Even darker gradient when pressed */
+}
+
+/* Mobile Controls Styling */
+.mobile-controls {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  padding: 10px 0;
+  position: absolute;
+  bottom: 0; /* Position at the bottom of the game container */
+  left: 0;
+  background: rgba(0, 0, 0, 0.5); /* Semi-transparent background for controls */
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+  z-index: 11; /* Above game screens if they are shown */
+}
+
+.mobile-button {
+  flex: 1; /* Distribute space evenly */
+  margin: 0 5px; /* Spacing between buttons */
+  padding: 15px 10px;
+  font-size: 1.5em;
+  font-family: 'Press Start 2P', cursive;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+  border: 2px solid;
+}
+
+.control-button { /* Left/Right */
+  color: #00ffff;
+  background: linear-gradient(145deg, #004f4f, #002f2f);
+  border-color: #00ffff;
+}
+
+.control-button:hover, .control-button:active {
+  background: linear-gradient(145deg, #008f8f, #004f4f);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+.action-button { /* Shoot */
+  color: #ff00ff;
+  background: linear-gradient(145deg, #5f005f, #2f002f);
+  border-color: #ff00ff;
+}
+
+.action-button:hover, .action-button:active {
+  background: linear-gradient(145deg, #8f008f, #4f004f);
+  box-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+/* Hide desktop elements on small screens and vice-versa */
+.hidden {
+  display: none !important;
+}
+
+.hidden-desktop {
+  display: none !important;
+}
+
+@media (max-width: 768px) { /* Adjust breakpoint as needed for mobile/tablet */
+  .hidden-desktop {
+    display: flex !important; /* Show mobile controls */
+  }
+
+  /* Specific adjustment for fullscreen button on menu, as it's a block-level button */
+  .fullscreen-button.hidden-desktop {
+    display: block !important;
+  }
+
+  /* Hide mobile controls when game screens (menu/game over) are active */
+  /* Using '~' (general sibling selector) because mobileControls is not an immediate sibling */
+  .game-screen:not(.hidden) ~ #mobileControls {
+      display: none !important;
+  }
+}
+
+/* Portrait Mode Warning */
+.portrait-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  color: #ff0000;
+  font-size: 1.8em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  z-index: 9999;
+  flex-direction: column; /* To center text vertically */
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (orientation: landscape) {
+  .portrait-warning {
+    display: none !important; /* Hide warning in landscape */
+  }
+}
+
+@media (orientation: portrait) and (max-width: 768px) { /* Only show for mobile portrait */
+  .portrait-warning {
+    display: flex !important;
+  }
+  .game-container {
+      display: none !important; /* Hide game on mobile portrait */
+  }
 }
 
 
@@ -158,5 +272,9 @@ canvas {
   }
   .game-container {
       min-height: 500px; /* Adjust min-height for smaller screens */
+  }
+  .mobile-button {
+    padding: 10px 5px;
+    font-size: 1.2em;
   }
 }
