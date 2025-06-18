@@ -1,240 +1,336 @@
-// Get the canvas element and its 2D rendering context
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+// game.js
 
-// CRUCIAL FOR PIXEL ART RENDERING:
-// Disable image smoothing for the 2D context.
-// This prevents sprites from looking blurry when scaled up.
-ctx.imageSmoothingEnabled = false;
-ctx.mozImageSmoothingEnabled = false;
-ctx.webkitImageSmoothingEnabled = false;
-ctx.msImageSmoothingEnabled = false;
+// ... (your existing code for canvas, ctx, images, sounds) ...
 
-// Load game assets (player, enemy, explosion spritesheets)
-const playerImage = new Image();
-playerImage.src = 'player.png'; // Make sure player.png is in the same directory
+// --- Game State Variables ---
+let gameStarted = false; // Track if the game has started
+let score = 0;
+let lastFrameTime = 0;
+const frameRate = 1000 / 60; // 60 frames per second
+let gameLoopId;
 
-const enemyImage = new Image();
-enemyImage.src = 'enemy.png';   // Make sure enemy.png is in the same directory
+// --- DOM Elements ---
+const mainMenu = document.getElementById('mainMenu');
+const startButton = document.getElementById('startButton');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const restartButton = document.getElementById('restartButton');
+const finalScoreDisplay = document.getElementById('finalScore');
+const fullscreenButton = document.getElementById('fullscreenButton'); //
 
-const explosionImage = new Image();
-explosionImage.src = 'explosion.png'; // Make sure explosion.png is in the same directory
+// Mobile Controls
+const mobileControls = document.getElementById('mobileControls'); //
+const leftButton = document.getElementById('leftButton'); //
+const rightButton = document.getElementById('rightButton'); //
+const shootButton = document.getElementById('shootButton'); //
 
-// --- Audio Assets ---
-const shootSound = new Audio('shoot.mp3'); // Path to your shoot sound
-const explosionSound = new Audio('explosion.mp3'); // Path to your explosion sound
-const gameOverSound = new Audio('game_over.mp3'); // Path to your game over sound
-const tapSound = new Audio('tap.mp3'); // New: Path to your button tap sound
+// New: Portrait Warning Element
+const portraitWarning = document.createElement('div');
+portraitWarning.className = 'portrait-warning';
+portraitWarning.innerHTML = 'Please rotate your device to landscape mode for the best experience! <br> Tap anywhere to continue and go fullscreen.';
+document.body.appendChild(portraitWarning);
 
-// Set initial volume (0 to 1)
-shootSound.volume = 0.3; // Adjust as needed
-explosionSound.volume = 0.5; // Adjust as needed
-gameOverSound.volume = 0.7; // Adjust game over sound volume
-tapSound.volume = 0.2; // New: Adjust tap sound volume (keep it subtle)
-
-
-// Game states
-const GAME_STATE_MENU = 'menu';
-const GAME_STATE_PLAYING = 'playing';
-const GAME_STATE_GAME_OVER = 'gameOver';
-let currentGameState = GAME_STATE_MENU; // Initial game state
-
-// Game state variables
-let keys = {}; // Stores the state of pressed keys
+// --- Game Object Arrays ---
+let player;
 let bullets = [];
 let enemies = [];
 let explosions = [];
-let score = 0;
-let playerLives = 3; // Player starts with 3 lives
-let enemySpawnIntervalId; // To store the interval ID for clearing
-let gameLoopId; // To store the requestAnimationFrame ID for cancelling
 
-// Player object - Changed to const to prevent accidental reassignment
-const player = {
-  x: 0, // Will be centered on initialization
-  y: 500,
-  width: 8, // Sprite width (source)
-  height: 8, // Sprite height (source)
-  scale: 4, // Scale factor for rendering (8px * 4 = 32px)
-  speed: 3, // Movement speed
-  direction: 'idle', // 'left', 'right', or 'idle' for animation
-  frame: 1, // Current animation frame for the player (0=left, 1=idle, 2=right)
-  frameTick: 0, // Counter for animation frame changes
-  isInvincible: false, // Flag for temporary invincibility after being hit
-  invincibilityTimer: 0, // Timer for invincibility frames
-  maxInvincibilityTime: 90, // Number of update ticks for invincibility
-  lastShotTime: 0, // Timestamp of the last shot
-  shootCooldown: 150, // Milliseconds between shots for continuous firing
-  // Method to create a new bullet
-  shoot: function () {
-    // Only allow shooting in playing state and if not dead
-    if (currentGameState === GAME_STATE_PLAYING) {
-        bullets.push({
-            x: this.x + (this.width * this.scale) / 2 - 1, // Position bullet in the middle of the player (accounting for scale)
-            y: this.y,
-            speed: 5
-        });
-        // Play shoot sound
-        shootSound.currentTime = 0; // Rewind to start for quick playback
-        shootSound.play().catch(e => console.error("Shoot sound play error:", e));
+// --- Game Configuration ---
+const PLAYER_SPEED = 5;
+const BULLET_SPEED = 10;
+const ENEMY_SPEED = 2;
+const ENEMY_SPAWN_INTERVAL = 1200; // milliseconds
+let lastEnemySpawnTime = 0;
+
+// --- Sound Functions ---
+function playSound(audioElement) {
+    audioElement.currentTime = 0; // Rewind to start
+    audioElement.play().catch(e => console.error("Audio playback failed:", e)); // Catch and log errors
+}
+
+function playShootSound() { playSound(shootSound); }
+function playExplosionSound() { playSound(explosionSound); }
+function playGameOverSound() { playSound(gameOverSound); }
+function playTapSound() { playSound(tapSound); } //
+
+// --- Game Loop and Initialization Functions ---
+
+function startGame() {
+    playTapSound();
+    gameStarted = true;
+    score = 0;
+    bullets = [];
+    enemies = [];
+    explosions = [];
+    player = new Player(); // Reinitialize player
+    gameOverScreen.classList.add('hidden');
+    mainMenu.classList.add('hidden');
+    mobileControls.classList.remove('hidden'); // Show mobile controls when game starts
+    canvas.focus(); // Ensure canvas can receive input if applicable
+
+    // Hide portrait warning if visible
+    portraitWarning.classList.add('hidden');
+
+    // Start the game loop
+    if (gameLoopId) {
+        cancelAnimationFrame(gameLoopId);
     }
-  }
-};
+    gameLoopId = requestAnimationFrame(gameLoop);
+}
 
-// Declare UI elements globally but assign them in DOMContentLoaded
-let mainMenu;
-let startButton;
-let gameOverScreen;
-let finalScoreDisplay;
-let restartButton;
-let mobileControls; // New reference for mobile controls container
-let leftButton, rightButton, shootButton; // New references for mobile buttons
-let fullscreenButton; // New reference for fullscreen button
+function endGame() {
+    gameStarted = false;
+    playGameOverSound();
+    finalScoreDisplay.textContent = score; //
+    gameOverScreen.classList.remove('hidden'); //
+    mobileControls.classList.add('hidden'); // Hide mobile controls when game ends
+    cancelAnimationFrame(gameLoopId);
+}
 
-// --- Game State Management ---
+function gameLoop(currentTime) {
+    if (!gameStarted) return; // Stop if game not started
 
-// Helper function to toggle visibility of elements
-function toggleVisibility(element, show) {
-    if (element) {
-        if (show) {
-            element.classList.remove('hidden');
-        } else {
-            element.classList.add('hidden');
+    const deltaTime = currentTime - lastFrameTime;
+
+    if (deltaTime >= frameRate) {
+        update(deltaTime);
+        render();
+        lastFrameTime = currentTime;
+    }
+    gameLoopId = requestAnimationFrame(gameLoop);
+}
+
+function update(deltaTime) {
+    // Player movement (desktop/keyboard)
+    player.update();
+
+    // Spawn enemies
+    lastEnemySpawnTime += deltaTime;
+    if (lastEnemySpawnTime >= ENEMY_SPAWN_INTERVAL) {
+        enemies.push(new Enemy());
+        lastEnemySpawnTime = 0;
+    }
+
+    // Update and filter bullets
+    bullets = bullets.filter(bullet => {
+        bullet.update();
+        return bullet.y > 0; // Keep bullets on screen
+    });
+
+    // Update and filter enemies
+    enemies = enemies.filter(enemy => {
+        enemy.update();
+        // Check for collision with player (simple AABB)
+        if (
+            player.x < enemy.x + enemy.width &&
+            player.x + player.width > enemy.x &&
+            player.y < enemy.y + enemy.height &&
+            player.y + player.height > enemy.y
+        ) {
+            // Player hit by enemy
+            endGame();
+            return false; // Remove enemy
+        }
+        return enemy.y < canvas.height; // Keep enemies on screen
+    });
+
+    // Bullet-enemy collision detection
+    bullets.forEach(bullet => {
+        enemies.forEach(enemy => {
+            if (!bullet.isHit && !enemy.isHit &&
+                bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + enemy.height &&
+                bullet.y + bullet.height > enemy.y
+            ) {
+                // Collision
+                bullet.isHit = true;
+                enemy.isHit = true;
+                score += 10;
+                playExplosionSound();
+                explosions.push(new Explosion(enemy.x, enemy.y)); // Create explosion at enemy position
+            }
+        });
+    });
+
+    // Filter out hit bullets and enemies
+    bullets = bullets.filter(bullet => !bullet.isHit);
+    enemies = enemies.filter(enemy => !enemy.isHit);
+
+    // Update and filter explosions
+    explosions = explosions.filter(explosion => {
+        explosion.update();
+        return !explosion.isFinished;
+    });
+
+    // Check if player has lives (not implemented in this version, but good for future)
+    // For now, any enemy hit ends the game.
+}
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+    player.draw();
+
+    bullets.forEach(bullet => bullet.draw());
+    enemies.forEach(enemy => enemy.draw());
+    explosions.forEach(explosion => explosion.draw());
+
+    // Draw score
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '20px "Press Start 2P"';
+    ctx.textAlign = 'left';
+    ctx.fillText('SCORE: ' + score, 10, 30);
+}
+
+// --- Player Class ---
+class Player {
+    constructor() {
+        this.width = 64; // Adjust based on player sprite
+        this.height = 64; // Adjust based on player sprite
+        this.x = canvas.width / 2 - this.width / 2;
+        this.y = canvas.height - this.height - 20;
+        this.speed = PLAYER_SPEED;
+        this.isMovingLeft = false;
+        this.isMovingRight = false;
+        this.lastShotTime = 0;
+        this.fireRate = 200; // milliseconds between shots
+        this.spriteSheet = playerImage;
+        this.frameWidth = 16; // Width of a single frame in the sprite sheet
+        this.frameHeight = 16; // Height of a single frame in the sprite sheet
+        this.scale = this.width / this.frameWidth; // Calculate scale based on desired display size
+    }
+
+    draw() {
+        // Draw the player sprite from the spritesheet
+        ctx.drawImage(
+            this.spriteSheet,
+            0, // Source X (start of the frame in sprite sheet)
+            0, // Source Y (start of the frame in sprite sheet)
+            this.frameWidth, // Source Width (width of the frame)
+            this.frameHeight, // Source Height (height of the frame)
+            this.x, // Destination X (where to draw on canvas)
+            this.y, // Destination Y (where to draw on canvas)
+            this.width, // Destination Width (stretched width on canvas)
+            this.height // Destination Height (stretched height on canvas)
+        );
+    }
+
+    update() {
+        if (this.isMovingLeft && this.x > 0) {
+            this.x -= this.speed;
+        }
+        if (this.isMovingRight && this.x + this.width < canvas.width) {
+            this.x += this.speed;
+        }
+    }
+
+    shoot() {
+        const currentTime = performance.now();
+        if (currentTime - this.lastShotTime > this.fireRate) {
+            bullets.push(new Bullet(this.x + this.width / 2 - 2, this.y)); // Bullet from center-top of player
+            playShootSound();
+            this.lastShotTime = currentTime;
         }
     }
 }
 
-// Shows the main menu screen and hides others
-function showMainMenu() {
-    currentGameState = GAME_STATE_MENU;
-    toggleVisibility(mainMenu, true);
-    toggleVisibility(canvas, false);
-    toggleVisibility(gameOverScreen, false);
-    // Show fullscreen button on mobile menu only
-    if (window.matchMedia("(max-width: 768px)").matches) {
-        toggleVisibility(fullscreenButton, true);
+// --- Bullet Class ---
+class Bullet {
+    constructor(x, y) {
+        this.width = 4;
+        this.height = 10;
+        this.x = x;
+        this.y = y;
+        this.speed = BULLET_SPEED;
+        this.color = '#00ffff'; // Cyan bullet
+        this.isHit = false; // Flag to mark if bullet has hit something
     }
-    toggleVisibility(mobileControls, false); // Hide mobile controls on menu
-}
 
-// Starts the game
-function startGame() {
-    currentGameState = GAME_STATE_PLAYING;
-    toggleVisibility(mainMenu, false);
-    toggleVisibility(canvas, true);
-    toggleVisibility(gameOverScreen, false);
-    toggleVisibility(fullscreenButton, false); // Hide fullscreen button once game starts
-    // Show mobile controls if on mobile and game is playing
-    if (window.matchMedia("(max-width: 768px)").matches) {
-        toggleVisibility(mobileControls, true);
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
     }
-    setupGame(); // Initialize game variables and start loops
-}
 
-// Shows the game over screen
-function showGameOverScreen() {
-    currentGameState = GAME_STATE_GAME_OVER;
-    if (finalScoreDisplay) finalScoreDisplay.textContent = score; // Update final score
-    toggleVisibility(gameOverScreen, true);
-    toggleVisibility(canvas, false);
-    toggleVisibility(mainMenu, false);
-    toggleVisibility(mobileControls, false); // Hide mobile controls on game over
-    // Stop all game activities
-    clearInterval(enemySpawnIntervalId);
-    cancelAnimationFrame(gameLoopId);
-
-    // Play game over sound
-    gameOverSound.currentTime = 0; // Rewind to start
-    gameOverSound.play().catch(e => console.error("Game Over sound play error:", e));
-}
-
-// --- Game Setup and Reset ---
-function setupGame() {
-  // Reset game variables
-  player.x = (canvas.width / 2) - (player.width * player.scale / 2);
-  player.y = 500;
-  playerLives = 3; // Reset player lives here
-  player.isInvincible = false;
-  player.invincibilityTimer = 0;
-  score = 0;
-  bullets = [];
-  enemies = [];
-  explosions = [];
-  player.lastShotTime = 0; // Reset shot timer
-
-  // Clear any existing intervals and animation frames to prevent duplicates
-  clearInterval(enemySpawnIntervalId);
-  cancelAnimationFrame(gameLoopId);
-
-  // Start spawning enemies
-  enemySpawnIntervalId = setInterval(spawnEnemy, 1000); // Spawn an enemy every second
-
-  // Start the game loop
-  gameLoop();
-}
-
-// --- Event Listeners for Controls ---
-
-// Keyboard controls (desktop) for player movement and shooting
-document.addEventListener('keydown', e => {
-  keys[e.key] = true;
-  // Prevent default browser behavior for spacebar (e.g., scrolling)
-  if (e.key === ' ') {
-    e.preventDefault();
-  }
-});
-
-document.addEventListener('keyup', e => {
-  keys[e.key] = false;
-});
-
-// New: Function to play tap sound
-function playTapSound() {
-    tapSound.currentTime = 0; // Rewind to start
-    tapSound.play().catch(e => console.error("Tap sound play error:", e));
-}
-
-// --- Mobile Touch Controls ---
-function setupMobileControls() {
-    if (leftButton) {
-        leftButton.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent scrolling
-            keys['ArrowLeft'] = true;
-            playTapSound(); // Play tap sound on press
-        });
-        leftButton.addEventListener('touchend', () => {
-            keys['ArrowLeft'] = false;
-        });
-    }
-    if (rightButton) {
-        rightButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            keys['ArrowRight'] = true;
-            playTapSound(); // Play tap sound on press
-        });
-        rightButton.addEventListener('touchend', () => {
-            keys['ArrowRight'] = false;
-        });
-    }
-    if (shootButton) {
-        // Use touchstart and touchend to simulate continuous press
-        shootButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            keys[' '] = true; // Simulate spacebar press
-            // Note: Tap sound for shoot button is not ideal as it would conflict
-            // with the actual shoot sound. Omitting it here.
-            // If you want a *separate* tap sound for the button vs. the weapon,
-            // you could add it, but it might get noisy.
-            // playTapSound();
-        });
-        shootButton.addEventListener('touchend', () => {
-            keys[' '] = false;
-        });
+    update() {
+        this.y -= this.speed;
     }
 }
+
+// --- Enemy Class ---
+class Enemy {
+    constructor() {
+        this.width = 64;
+        this.height = 64;
+        this.x = Math.random() * (canvas.width - this.width);
+        this.y = -this.height; // Start above canvas
+        this.speed = ENEMY_SPEED + (score / 1000); // Increase speed with score
+        this.isHit = false; // Flag to mark if enemy has been hit
+        this.spriteSheet = enemyImage;
+        this.frameWidth = 16;
+        this.frameHeight = 16;
+        this.scale = this.width / this.frameWidth;
+    }
+
+    draw() {
+        ctx.drawImage(
+            this.spriteSheet,
+            0, 0, // Source X, Y
+            this.frameWidth, this.frameHeight, // Source Width, Height
+            this.x, this.y, // Destination X, Y
+            this.width, this.height // Destination Width, Height
+        );
+    }
+
+    update() {
+        this.y += this.speed;
+    }
+}
+
+// --- Explosion Class ---
+class Explosion {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.frame = 0;
+        this.frameRate = 50; // milliseconds per frame
+        this.lastFrameTime = 0;
+        this.isFinished = false;
+        this.spriteSheet = explosionImage;
+        this.frameWidth = 16; // Width of a single frame in the explosion sprite sheet
+        this.frameHeight = 16; // Height of a single frame in the explosion sprite sheet
+        this.numFrames = 5; // Number of frames in your explosion sprite sheet
+        this.width = 64; // Display width
+        this.height = 64; // Display height
+    }
+
+    draw() {
+        const sx = this.frame * this.frameWidth; // Calculate source X based on current frame
+        ctx.drawImage(
+            this.spriteSheet,
+            sx, 0, // Source X, Y
+            this.frameWidth, this.frameHeight, // Source Width, Height
+            this.x, this.y, // Destination X, Y
+            this.width, this.height // Destination Width, Height
+        );
+    }
+
+    update() {
+        const currentTime = performance.now();
+        if (currentTime - this.lastFrameTime > this.frameRate) {
+            this.frame++;
+            this.lastFrameTime = currentTime;
+            if (this.frame >= this.numFrames) {
+                this.isFinished = true;
+            }
+        }
+    }
+}
+
 
 // --- Fullscreen Functionality ---
 function toggleFullscreen() {
+    playTapSound();
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => {
             console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
@@ -244,300 +340,157 @@ function toggleFullscreen() {
             document.exitFullscreen();
         }
     }
-    playTapSound(); // Play tap sound on fullscreen button click
 }
 
-
-// --- Game Functions ---
-
-// Spawns a new enemy at a random X position at the top of the canvas
-function spawnEnemy() {
-  if (currentGameState !== GAME_STATE_PLAYING) return; // Only spawn if game is playing
-  enemies.push({
-    x: Math.random() * (canvas.width - player.width * player.scale), // Random X position within canvas bounds
-    y: 0, // Start at the top
-    width: 8, // Sprite width (source)
-    height: 8, // Sprite height (source)
-    scale: 4, // Scale factor for rendering
-    frame: 0, // Current animation frame for the enemy
-    frameTick: 0 // Counter for animation frame changes
-  });
-}
-
-// Updates the game state (player, bullets, enemies, collisions, animations)
-function update() {
-  if (currentGameState !== GAME_STATE_PLAYING) return; // Only update game logic if playing
-
-  // Player movement
-  if (keys['ArrowLeft']) {
-    player.x -= player.speed;
-    player.direction = 'left';
-  } else if (keys['ArrowRight']) {
-    player.x += player.speed;
-    player.direction = 'right';
-  } else {
-    player.direction = 'idle';
-  }
-
-  // Keep player within canvas bounds
-  player.x = Math.max(0, Math.min(canvas.width - player.width * player.scale, player.x));
-
-  // Handle player invincibility
-  if (player.isInvincible) {
-    player.invincibilityTimer++;
-    if (player.invincibilityTimer >= player.maxInvincibilityTime) {
-      player.isInvincible = false;
-      player.invincibilityTimer = 0;
+// --- Event Listeners ---
+document.addEventListener('keydown', (e) => {
+    if (!gameStarted) return;
+    if (e.key === 'ArrowLeft') player.isMovingLeft = true;
+    if (e.key === 'ArrowRight') player.isMovingRight = true;
+    if (e.key === ' ') {
+        e.preventDefault(); // Prevent spacebar from scrolling
+        player.shoot();
     }
-  }
+});
 
-  // Continuous shooting while spacebar is held down (or mobile shoot button)
-  if (keys[' ']) {
-    const currentTime = performance.now(); // Get current time for cooldown
-    // Defensive check before calling player.shoot()
-    if (player && typeof player.shoot === 'function' && currentTime - player.lastShotTime > player.shootCooldown) {
-      player.shoot();
-      player.lastShotTime = currentTime; // Update last shot time
-    }
-  }
+document.addEventListener('keyup', (e) => {
+    if (!gameStarted) return;
+    if (e.key === 'ArrowLeft') player.isMovingLeft = false;
+    if (e.key === 'ArrowRight') player.isMovingRight = false;
+});
 
-  // Bullets update
-  bullets = bullets.filter(b => b.y > 0); // Filter out bullets that have gone off-screen
-  bullets.forEach(b => b.y -= b.speed); // Move bullets upwards
+// Mobile Controls Event Listeners
+function setupMobileControls() {
+    let shootInterval;
 
-  // Enemies update
-  enemies.forEach(e => {
-    e.y += 1;
-    e.frameTick++;
-    if (e.frameTick > 10) {
-      e.frame = (e.frame + 1) % 5;
-      e.frameTick = 0;
-    }
-  });
-  enemies = enemies.filter(e => e.y < canvas.height); // Filter out enemies that have gone off-screen
-
-  // Collision detection (Bullet-Enemy)
-  for (let bi = bullets.length - 1; bi >= 0; bi--) {
-    const b = bullets[bi];
-    for (let ei = enemies.length - 1; ei >= 0; ei--) {
-      const e = enemies[ei];
-
-      // Check for overlap between bullet and enemy bounding boxes
-      if (
-        b.x < e.x + e.width * e.scale &&
-        b.x + 2 > e.x &&
-        b.y < e.y + e.height * e.scale &&
-        b.y + 4 > e.y
-      ) {
-        // Collision detected:
-        explosions.push({ x: e.x, y: e.y, frame: 0, tick: 0, scale: 4, width: 8, height: 8 });
-        explosionSound.currentTime = 0; // Rewind for quick playback
-        explosionSound.play().catch(e => console.error("Explosion sound play error:", e));
-
-        enemies.splice(ei, 1);
-        bullets.splice(bi, 1);
-        score += 100;
-        break;
-      }
-    }
-  }
-
-  // Collision detection (Player-Enemy)
-  if (!player.isInvincible) { // Only check for collision if player is not invincible
-    for (let ei = enemies.length - 1; ei >= 0; ei--) {
-      const e = enemies[ei];
-
-      // Check for overlap between player and enemy bounding boxes
-      if (
-        player.x < e.x + e.width * e.scale &&
-        player.x + player.width * player.scale > e.x &&
-        player.y < e.y + player.height * player.scale &&
-        player.y + player.height * player.scale > e.y
-      ) {
-        console.log("Player-Enemy Collision Detected!"); // Log collision
-        console.log("Player Lives BEFORE:", playerLives); // Log lives before decrement
-        playerLives--; // Decrease player life
-        console.log("Player Lives AFTER:", playerLives); // Log lives after decrement
-
-        explosions.push({ x: player.x, y: player.y, frame: 0, tick: 0, scale: 4, width: 8, height: 8 }); // Explosion at player
-        explosionSound.currentTime = 0; // Rewind for quick playback
-        explosionSound.play().catch(e => console.error("Player explosion sound play error:", e));
-
-        enemies.splice(ei, 1); // Remove the enemy that hit the player
-
-        if (playerLives <= 0) {
-          console.log("Player lives reached 0. Showing Game Over Screen."); // Final lives log
-          showGameOverScreen(); // Game over if no lives left
-        } else {
-          player.isInvincible = true; // Make player invincible for a short time
-          player.invincibilityTimer = 0;
-          console.log("Player is now invincible."); // Invincibility log
-        }
-        break; // Player can only be hit by one enemy at a time
-      }
-    }
-  }
-
-  // Explosions update
-  explosions = explosions.filter(ex => ex.frame < 3); // Assuming 3 frames for explosion animation
-  explosions.forEach(ex => {
-    ex.tick++;
-    if (ex.tick > 5) {
-      ex.frame++;
-      ex.tick = 0;
-    }
-  });
-
-  // Player animation frame update
-  player.frameTick++;
-  if (player.frameTick > 10) {
-    if (player.direction === 'left') player.frame = 0;
-    else if (player.direction === 'idle') player.frame = 1;
-    else if (player.direction === 'right') player.frame = 2;
-    player.frameTick = 0;
-  }
-}
-
-// Draws all game elements on the canvas
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas before drawing new frame
-
-  if (currentGameState === GAME_STATE_PLAYING) {
-    // Draw player (with blinking effect if invincible)
-    // Blinking effect should only happen IF player is invincible
-    if (!player.isInvincible || (player.isInvincible && player.invincibilityTimer % 10 < 5)) {
-        ctx.drawImage(
-            playerImage,
-            player.frame * player.width, 0, player.width, player.height,
-            player.x, player.y,
-            player.width * player.scale, player.height * player.scale
-        );
-    }
-
-    // Draw bullets
-    ctx.fillStyle = 'red'; // Set bullet color
-    bullets.forEach(b => ctx.fillRect(b.x, b.y, 2, 4)); // Draw each bullet as a small rectangle
-
-    // Draw enemies
-    enemies.forEach(e => {
-      ctx.drawImage(
-        enemyImage,
-        e.frame * e.width, 0, e.width, e.height,
-        e.x, e.y,
-        e.width * e.scale, e.height * e.scale
-      );
+    leftButton.addEventListener('touchstart', () => {
+        if (!gameStarted) return;
+        player.isMovingLeft = true;
+        playTapSound();
+    });
+    leftButton.addEventListener('touchend', () => {
+        player.isMovingLeft = false;
     });
 
-    // Draw explosions
-    explosions.forEach(ex => {
-      ctx.drawImage(
-        explosionImage,
-        ex.frame * ex.width, 0, ex.width, ex.height,
-        ex.x, ex.y,
-        ex.width * ex.scale, ex.height * ex.scale
-      );
+    rightButton.addEventListener('touchstart', () => {
+        if (!gameStarted) return;
+        player.isMovingRight = true;
+        playTapSound();
+    });
+    rightButton.addEventListener('touchend', () => {
+        player.isMovingRight = false;
     });
 
-    // Draw Score and Lives HUD
-    ctx.fillStyle = '#00ffff'; // Cyan color for text
-    ctx.font = "16px 'Press Start 2P'";
-    ctx.textAlign = 'left';
-    ctx.fillText(`SCORE: ${score}`, 10, 30);
-    ctx.textAlign = 'right';
-    ctx.fillText(`LIVES: ${playerLives}`, canvas.width - 10, 30);
-  }
+    shootButton.addEventListener('touchstart', (e) => {
+        if (!gameStarted) return;
+        e.preventDefault(); // Prevent touch-hold from triggering context menus
+        player.shoot();
+        shootInterval = setInterval(() => player.shoot(), player.fireRate);
+        playTapSound();
+    });
+    shootButton.addEventListener('touchend', () => {
+        clearInterval(shootInterval);
+    });
 }
 
-// The main game loop
-function gameLoop() {
-  try {
-    update(); // Update game logic
-    draw();   // Draw current game state
-  } catch (error) {
-    console.error("Game loop error:", error);
-    // If an error occurs, force game over to stop the loop and allow restart
-    showGameOverScreen();
-    return; // Stop requesting animation frames if an error occurs
-  }
-
-  // Continue looping if game is still playing
-  if (currentGameState === GAME_STATE_PLAYING) {
-    gameLoopId = requestAnimationFrame(gameLoop);
-  }
-}
-
-
-// --- Initial Game Start ---
-// Ensure all images are loaded before starting the game.
-let imagesLoaded = 0;
-const totalImages = 3; // playerImage, enemyImage, explosionImage
-
-const imageLoadHandler = () => {
-    imagesLoaded++;
-    if (imagesLoaded === totalImages) {
-        // All images are loaded, show the main menu
-        showMainMenu();
-    }
-};
-
-playerImage.onload = imageLoadHandler;
-enemyImage.onload = imageLoadHandler;
-explosionImage.onload = imageLoadHandler;
-
-// Handle potential errors if images fail to load
-playerImage.onerror = () => console.error("ERROR: Failed to load player.png");
-enemyImage.onerror = () => console.error("ERROR: Failed to load enemy.png");
-explosionImage.onerror = () => console.error("ERROR: Failed to load explosion.png");
-
-// Ensure DOM is fully loaded before getting elements and attaching event listeners
+// Fullscreen on tap and initial game setup
 document.addEventListener('DOMContentLoaded', () => {
-    // Assign UI elements ONLY after DOM is loaded
-    mainMenu = document.getElementById('mainMenu');
-    startButton = document.getElementById('startButton');
-    gameOverScreen = document.getElementById('gameOverScreen');
-    finalScoreDisplay = document.getElementById('finalScore');
-    restartButton = document.getElementById('restartButton');
-    // Correctly get references to mobile control elements
-    mobileControls = document.getElementById('mobileControls');
-    leftButton = document.getElementById('leftButton');
-    rightButton = document.getElementById('rightButton');
-    shootButton = document.getElementById('shootButton');
-    fullscreenButton = document.getElementById('fullscreenButton');
+    // Check if images are loaded before proceeding
+    Promise.all([
+        new Promise(resolve => { playerImage.onload = resolve; }),
+        new Promise(resolve => { enemyImage.onload = resolve; }),
+        new Promise(resolve => { explosionImage.onload = resolve; })
+    ]).then(() => {
+        console.log("All images loaded.");
 
-    // Button click listeners - Now playing tap sound
-    if (startButton) {
-        startButton.addEventListener('click', () => {
-            playTapSound();
-            startGame();
-        });
-    } else {
-        console.error("ERROR: startButton element not found after DOMContentLoaded. Check index.html IDs.");
+        // Attach event listeners for start and restart buttons
+        if (startButton) {
+            startButton.addEventListener('click', () => {
+                playTapSound();
+                startGame();
+            });
+        } else {
+            console.error("ERROR: startButton element not found after DOMContentLoaded. Check index.html IDs.");
+        }
+        if (restartButton) {
+            restartButton.addEventListener('click', () => {
+                playTapSound();
+                startGame();
+            });
+        } else {
+            console.error("ERROR: restartButton element not found after DOMContentLoaded. Check index.html IDs.");
+        }
+        if (fullscreenButton) {
+            fullscreenButton.addEventListener('click', toggleFullscreen); // toggleFullscreen already plays sound
+        } else {
+            console.error("ERROR: fullscreenButton element not found after DOMContentLoaded. Check index.html IDs.");
+        }
+
+        // Check for robustness
+        if (!mainMenu) console.error("ERROR: mainMenu element not found after DOMContentLoaded. Check index.html IDs.");
+        if (!gameOverScreen) console.error("ERROR: gameOverScreen element not found after DOMContentLoaded. Check index.html IDs.");
+        if (!finalScoreDisplay) console.error("ERROR: finalScoreDisplay element not found after DOMContentLoaded. Check index.html IDs.");
+        if (!mobileControls) console.error("ERROR: mobileControls element not found after DOMContentLoaded. Check index.html IDs.");
+        if (!leftButton) console.error("ERROR: leftButton element not found after DOMContentLoaded. Check index.html IDs.");
+        if (!rightButton) console.error("ERROR: rightButton element not found after DOMContentLoaded. Check index.html IDs.");
+        if (!shootButton) console.error("ERROR: shootButton element not found after DOMContentLoaded. Check index.html IDs.");
+
+        // Setup mobile touch controls
+        setupMobileControls();
+
+        // New: Event listener for any tap on the body/game-container to trigger fullscreen and then start game if not started
+        // Use a flag to ensure it only happens once to prevent re-triggering startGame accidentally.
+        let initialInteractionDone = false;
+        document.body.addEventListener('click', handleInitialInteraction, { once: true });
+        document.body.addEventListener('touchstart', handleInitialInteraction, { once: true });
+
+        function handleInitialInteraction() {
+            if (initialInteractionDone) return;
+            initialInteractionDone = true;
+
+            // Request fullscreen
+            toggleFullscreen(); // This plays the tap sound.
+
+            // If game hasn't started yet, and we have a start button, simulate a click
+            if (!gameStarted && startButton) {
+                startButton.click(); // This will call startGame()
+            }
+            // If the game needs to be explicitly started and not just via a menu,
+            // you might call startGame() here directly, but startButton.click() is safer
+            // as it relies on existing game logic.
+
+            // Only show controls on mobile
+            if (window.innerWidth <= 768) { // Assuming 768px is your mobile breakpoint
+                 mobileControls.classList.remove('hidden');
+            }
+        }
+
+        // New: Orientation change listener for the warning message
+        window.addEventListener('orientationchange', checkOrientation);
+        window.addEventListener('resize', checkOrientation); // Also check on resize for desktop/tablet transitions
+        checkOrientation(); // Initial check on load
+    });
+});
+
+// New: Function to check and display orientation warning
+function checkOrientation() {
+    // Only show warning if on a mobile-like device (max-width: 768px)
+    if (window.innerWidth <= 768 && window.innerHeight > window.innerWidth) { // Portrait mode
+        portraitWarning.classList.remove('hidden');
+        // Optionally, if you want to block input in portrait, add a class to game-container
+        // gameContainer.classList.add('blurred-for-portrait');
+    } else { // Landscape or desktop
+        portraitWarning.classList.add('hidden');
+        // gameContainer.classList.remove('blurred-for-portrait');
     }
-    if (restartButton) {
-        restartButton.addEventListener('click', () => {
-            playTapSound();
-            startGame();
-        });
-    } else {
-        console.error("ERROR: restartButton element not found after DOMContentLoaded. Check index.html IDs.");
-    }
-    if (fullscreenButton) {
-        fullscreenButton.addEventListener('click', toggleFullscreen); // toggleFullscreen already plays sound
-    } else {
-        console.error("ERROR: fullscreenButton element not found after DOMContentLoaded. Check index.html IDs.");
-    }
-
-    // Also check for robustness
-    if (!mainMenu) console.error("ERROR: mainMenu element not found after DOMContentLoaded. Check index.html IDs.");
-    if (!gameOverScreen) console.error("ERROR: gameOverScreen element not found after DOMContentLoaded. Check index.html IDs.");
-    if (!finalScoreDisplay) console.error("ERROR: finalScoreDisplay element not found after DOMContentLoaded. Check index.html IDs.");
-    if (!mobileControls) console.error("ERROR: mobileControls element not found after DOMContentLoaded. Check index.html IDs.");
-    if (!leftButton) console.error("ERROR: leftButton element not found after DOMContentLoaded. Check index.html IDs.");
-    if (!rightButton) console.error("ERROR: rightButton element not found after DOMContentLoaded. Check index.html IDs.");
-    if (!shootButton) console.error("ERROR: shootButton element not found after DOMContentLoaded. Check index.html IDs.");
+}
 
 
-    // Setup mobile touch controls
-    setupMobileControls();
-
+// Adjust canvas size on window resize (optional, but good for responsiveness)
+window.addEventListener('resize', () => {
+    // If you want the canvas to dynamically resize *within* the game-container
+    // you might need to handle this here, but current CSS with aspect-ratio is often sufficient.
+    // canvas.width = canvas.offsetWidth;
+    // canvas.height = canvas.offsetHeight;
+    // render(); // Rerender content if canvas size changes
 });
