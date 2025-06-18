@@ -1,3 +1,5 @@
+/* style.css */
+
 /* Import Google Font for a retro game feel */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -8,8 +10,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  /* Use 100vh for PC as it's more stable for full viewport height */
-  min-height: 100vh;
+  min-height: 100vh; /* Default for PC */
   font-family: 'Press Start 2P', cursive; /* Apply retro font */
   color: #e0e0e0; /* Light text color */
   touch-action: manipulation; /* Improves responsiveness for touch input */
@@ -27,10 +28,8 @@ body {
   min-width: 320px; /* Ensure responsiveness for smaller screens */
   width: 90vw; /* Use viewport width for better responsiveness */
   max-width: 840px; /* Max width to prevent it from getting too large */
-  /* Default for PC: Ensure container accommodates 600px canvas + title + padding */
   min-height: 670px; /* Base height for PC to prevent squishing */
   box-sizing: border-box; /* Include padding in calculation */
-  /* No overflow-y: auto here for PC by default */
 }
 
 .game-title {
@@ -52,7 +51,6 @@ canvas {
   width: 100%; /* Make canvas responsive to its parent width */
   height: auto; /* Maintain aspect ratio */
   aspect-ratio: 800 / 600; /* Define a fixed aspect ratio for the canvas */
-  /* No max-height here for PC by default */
 
   /* CRUCIAL FOR PIXEL ART RENDERING: */
   image-rendering: optimizeSpeed;
@@ -61,26 +59,25 @@ canvas {
   image-rendering: optimize-contrast;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  transform: translateZ(0); /* Improves rendering performance */
+  transform: translateZ(0);
 }
 
 /* Game Screen (Menu/Game Over) Styling */
 .game-screen {
-  position: absolute; /* Position over the canvas area */
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%; /* Take full height of the parent .game-container */
-  background: rgba(0, 0, 0, 0.85); /* Semi-transparent overlay */
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Vertically center content */
+  justify-content: center;
   align-items: center;
-  z-index: 10; /* Ensure it's above the canvas */
-  border-radius: 15px; /* Match container border-radius */
-  box-sizing: border-box; /* Include padding in width/height */
-  padding: 10px; /* Add some padding to ensure content isn't right at the edge */
-  /* No overflow-y: auto here for PC by default */
+  z-index: 10;
+  border-radius: 15px;
+  box-sizing: border-box;
+  padding: 10px;
 }
 
 .hidden {
@@ -89,8 +86,8 @@ canvas {
 
 /* Text on Game Over/Menu Screens */
 .game-over-text {
-  font-size: 3em; /* Default large size for PC */
-  color: #ff00ff; /* Magenta color for game over */
+  font-size: 3em;
+  color: #ff00ff;
   text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.4);
   margin-bottom: 15px;
   text-align: center;
@@ -98,7 +95,7 @@ canvas {
 }
 
 .final-score {
-  font-size: 1.5em; /* Default large size for PC */
+  font-size: 1.5em;
   color: #00ffff;
   margin-top: 10px;
   margin-bottom: 30px;
@@ -107,26 +104,26 @@ canvas {
 
 /* Button Styling - Enhanced for a better look */
 .button-primary {
-  padding: 15px 30px; /* Default large padding for PC */
-  font-size: 1.2em; /* Default large font size for PC */
+  padding: 15px 30px;
+  font-size: 1.2em;
   font-family: 'Press Start 2P', cursive;
-  color: #00ffff; /* Cyan text */
-  background: linear-gradient(145deg, #005f5f, #002f2f); /* Darker cyan gradient */
-  border: 3px solid #00ffff; /* Cyan border */
+  color: #00ffff;
+  background: linear-gradient(145deg, #005f5f, #002f2f);
+  border: 3px solid #00ffff;
   border-radius: 8px;
   box-shadow:
-    0 0 15px rgba(0, 255, 255, 0.8), /* Outer glow */
-    inset 0 0 8px rgba(0, 255, 255, 0.4), /* Inner subtle glow */
-    0 5px 15px rgba(0, 0, 0, 0.5); /* Drop shadow for depth */
+    0 0 15px rgba(0, 255, 255, 0.8),
+    inset 0 0 8px rgba(0, 255, 255, 0.4),
+    0 5px 15px rgba(0, 0, 0, 0.5);
   cursor: pointer;
-  transition: all 0.2s ease-in-out; /* Smooth transitions for all properties */
+  transition: all 0.2s ease-in-out;
   text-transform: uppercase;
   letter-spacing: 2px;
   position: relative;
   overflow: hidden;
   margin-top: 20px;
   line-height: 1;
-  white-space: nowrap; /* Prevent button text from wrapping */
+  white-space: nowrap;
 }
 
 .button-primary:hover {
@@ -166,6 +163,8 @@ canvas {
   border-top-right-radius: 15px;
   z-index: 11;
   padding-bottom: env(safe-area-inset-bottom, 10px);
+  /* The mobile controls will be handled by game.js to show/hide.
+     Initially hidden on desktop, and shown by JS on mobile when needed. */
 }
 
 .mobile-button {
@@ -210,34 +209,30 @@ canvas {
 
 /* Hide desktop elements on small screens and vice-versa */
 .hidden-desktop {
-  display: none !important;
+  display: none !important; /* Hide by default */
 }
 
 /* =================================================== */
 /* MEDIA QUERIES FOR MOBILE AND SMALLER SCREENS */
 /* =================================================== */
 
-@media (max-width: 768px) { /* Styles applied for screens up to 768px wide (typical tablet portrait / large phone landscape) */
+@media (max-width: 768px) { /* Styles applied for screens up to 768px wide */
   body {
-    /* Use dvh for mobile for more accurate viewport height, overriding default vh */
-    min-height: 100dvh;
+    min-height: 100dvh; /* Use dvh for mobile */
   }
 
   .game-container {
-    max-height: 95vh; /* Limit height to prevent overflow on mobile */
-    overflow-y: auto; /* Enable scrolling if content exceeds max-height */
-    /* Remove min-height: 670px; for mobile, let max-height control it */
+    max-height: 95vh;
+    overflow-y: auto;
     min-height: unset; /* Reset min-height for mobile responsiveness */
   }
 
   .game-title {
-    /* More aggressive scaling for mobile */
     font-size: clamp(1.6em, 6vw, 2.5em);
   }
 
   canvas {
-    /* Restrict canvas height on smaller screens to allow space for buttons */
-    max-height: calc(95vh - 120px); /* Adjust '120px' if still too cramped/spacious */
+    max-height: calc(95vh - 120px);
   }
 
   .game-over-text {
@@ -249,43 +244,31 @@ canvas {
   }
 
   .button-primary {
-    /* Responsive padding and font size for buttons on mobile */
     padding: clamp(12px, 4.5vw, 15px) clamp(25px, 9vw, 30px);
     font-size: clamp(1.1em, 3.8vw, 1.2em);
   }
 
   .game-screen {
-    overflow-y: auto; /* Enable scrolling within menu/game over screens if content overflows */
+    overflow-y: auto;
   }
 
   .mobile-button {
-    /* Responsive button size for mobile controls */
     padding: clamp(10px, 4vw, 15px) clamp(5px, 2vw, 10px);
     font-size: clamp(1.2em, 5vw, 1.5em);
   }
 
-  .hidden-desktop {
-    display: flex !important; /* Show mobile controls and fullscreen button on mobile */
-  }
-
-  /* Specific adjustment for fullscreen button on menu, as it's a block-level button */
-  .fullscreen-button.hidden-desktop {
-    display: block !important;
-  }
-
-  /* Hide mobile controls when game screens (menu/game over) are active */
-  .game-screen:not(.hidden) ~ #mobileControls {
-      display: none !important;
-  }
+  /* mobile controls are now managed by game.js to show/hide the `hidden` class */
+  /* Remove the direct display: flex !important from hidden-desktop here */
+  /* The hidden-desktop will still ensure they only show up on mobile via JS */
 }
 
-/* Portrait Mode Warning - Specific to mobile portrait */
+/* Portrait Mode Warning - Only shows when in mobile portrait and game is in landscape */
 .portrait-warning {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100dvh; /* Use dvh for portrait warning height */
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.98);
   color: #ff0000;
   font-size: 1.8em;
@@ -298,19 +281,12 @@ canvas {
   padding: 20px;
   box-sizing: border-box;
   font-size: clamp(1.2em, 6vw, 1.8em);
+  /* Initially hidden, shown by JS */
+  display: none !important; /* Hide by default, game.js will manage its display */
 }
 
-@media (orientation: landscape) {
-  .portrait-warning {
-    display: none !important; /* Hide warning in landscape */
-  }
-}
-
-@media (orientation: portrait) and (max-width: 768px) { /* Only show for mobile portrait */
-  .portrait-warning {
-    display: flex !important;
-  }
-  .game-container {
-      display: none !important; /* Hide game on mobile portrait */
-  }
+@media (orientation: portrait) and (max-width: 768px) {
+  /* This rule will make portrait warning appear if the conditions are met */
+  /* We will let JavaScript manage the 'display' property for the warning */
+  /* The game-container will NOT be hidden by CSS here. */
 }
