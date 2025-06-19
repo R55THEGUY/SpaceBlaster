@@ -25,7 +25,6 @@ body {
   min-width: 320px; /* Ensure responsiveness for smaller screens */
   width: 90vw; /* Use viewport width for better responsiveness */
   max-width: 840px; /* Max width to prevent it from getting too large */
-  /* Added min-height to ensure container accommodates content properly, especially absolute overlays */
   min-height: 670px; /* Approx height for 600px canvas + title + padding */
 }
 
@@ -72,7 +71,6 @@ canvas {
   align-items: center;
   z-index: 10; /* Ensure it's above the canvas */
   border-radius: 15px; /* Match container border-radius */
-  /* No padding-bottom here, content is centered, padding should be on buttons themselves */
   box-sizing: border-box; /* Include padding in width/height */
 }
 
@@ -106,8 +104,7 @@ canvas {
   background: linear-gradient(145deg, #005f5f, #002f2f); /* Darker cyan gradient */
   border: 3px solid #00ffff; /* Cyan border */
   border-radius: 8px;
-  /* Enhanced box-shadow for a more vibrant glow and depth */
-  box-shadow: 
+  box-shadow:
     0 0 15px rgba(0, 255, 255, 0.8), /* Outer glow */
     inset 0 0 8px rgba(0, 255, 255, 0.4), /* Inner subtle glow */
     0 5px 15px rgba(0, 0, 0, 0.5); /* Drop shadow for depth */
@@ -115,16 +112,15 @@ canvas {
   transition: all 0.2s ease-in-out; /* Smooth transitions for all properties */
   text-transform: uppercase;
   letter-spacing: 2px;
-  position: relative; /* Needed for potential future pseudo-elements */
-  overflow: hidden; /* Ensures any glow doesn't spill out unexpectedly */
+  position: relative;
+  overflow: hidden;
   margin-top: 20px;
 }
 
 .button-primary:hover {
   color: #ffffff; /* White text on hover */
   background: linear-gradient(145deg, #008f8f, #004f4f); /* Lighter cyan gradient */
-  /* More intense glow on hover */
-  box-shadow: 
+  box-shadow:
     0 0 25px rgba(0, 255, 255, 1), /* Stronger outer glow */
     inset 0 0 12px rgba(0, 255, 255, 0.6), /* Stronger inner glow */
     0 8px 20px rgba(0, 0, 0, 0.6); /* Deeper drop shadow */
@@ -133,7 +129,7 @@ canvas {
 
 .button-primary:active {
   transform: translateY(0) scale(0.98); /* Press down effect */
-  box-shadow: 
+  box-shadow:
     0 0 10px rgba(0, 255, 255, 0.4), /* Reduced outer glow */
     inset 0 0 5px rgba(0, 255, 255, 0.2), /* Reduced inner glow */
     0 2px 5px rgba(0, 0, 0, 0.3); /* Lighter drop shadow */
@@ -215,41 +211,18 @@ canvas {
   }
 }
 
-/* Portrait Mode Warning */
-.portrait-warning {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.95);
-  color: #ff0000;
-  font-size: 1.8em;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  z-index: 9999;
-  flex-direction: column; /* To center text vertically */
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-@media (orientation: landscape) {
-  .portrait-warning {
-    display: none !important; /* Hide warning in landscape */
-  }
-}
-
-@media (orientation: portrait) and (max-width: 768px) { /* Only show for mobile portrait */
+/* Portrait Mode Warning - REMOVED */
+/* The following media query block is removed to eliminate the portrait warning */
+/*
+@media (orientation: portrait) and (max-width: 768px) {
   .portrait-warning {
     display: flex !important;
   }
   .game-container {
-      display: none !important; /* Hide game on mobile portrait */
+      display: none !important;
   }
 }
-
+*/
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 600px) {
@@ -273,4 +246,4 @@ canvas {
     padding: 10px 5px;
     font-size: 1.2em;
   }
-}
+  }
