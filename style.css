@@ -139,7 +139,9 @@ canvas {
 /* Mobile Controls Styling */
 .mobile-controls {
   display: flex;
-  justify-content: space-around;
+  /* Changed to space-between to push items to the ends */
+  justify-content: space-between;
+  align-items: center; /* Vertically align items in the middle */
   width: 100%;
   padding: 10px 0;
   position: absolute;
@@ -152,8 +154,8 @@ canvas {
 }
 
 .mobile-button {
-  flex: 1; /* Distribute space evenly */
-  margin: 0 5px; /* Spacing between buttons */
+  flex: 1; /* Distribute space evenly initially */
+  margin: 0 5px; /* Spacing between buttons, adjust as needed */
   padding: 15px 10px;
   font-size: 1.5em;
   font-family: 'Press Start 2P', cursive;
@@ -190,6 +192,15 @@ canvas {
   transform: translateY(-2px);
 }
 
+/* New rule to push the shoot button to the right */
+#shootButton {
+  margin-left: auto; /* This pushes it to the far right, taking up available space */
+  /* You might want to adjust the right margin for spacing from the edge */
+  margin-right: 10px; /* Example: add some space from the right edge */
+  /* Remove flex:1 from this specific button if you want its size dictated by padding, not even distribution */
+  flex: none; /* Make sure it doesn't try to take up equal space with other flex items */
+}
+
 /* Hide desktop elements on small screens and vice-versa */
 .hidden-desktop {
   display: none !important;
@@ -210,19 +221,6 @@ canvas {
       display: none !important;
   }
 }
-
-/* Portrait Mode Warning - REMOVED */
-/* The following media query block is removed to eliminate the portrait warning */
-/*
-@media (orientation: portrait) and (max-width: 768px) {
-  .portrait-warning {
-    display: flex !important;
-  }
-  .game-container {
-      display: none !important;
-  }
-}
-*/
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 600px) {
