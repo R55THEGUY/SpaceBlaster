@@ -54,7 +54,7 @@ const player = {
   x: 0, // Will be centered on initialization
   y: 500,
   width: 8, // Sprite width (source)
-  height: 8, // Sprite height (source)
+  height: 8, // Sprite width (source)
   scale: 4, // Scale factor for rendering (8px * 4 = 32px)
   speed: 3, // Movement speed
   direction: 'idle', // 'left', 'right', or 'idle' for animation
@@ -539,4 +539,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up mobile controls now that buttons are available
     setupMobileControls();
 });
-  
