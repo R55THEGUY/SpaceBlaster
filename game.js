@@ -536,8 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!rightButton) console.error("ERROR: rightButton element not found after DOMContentLoaded. Check index.html IDs.");
     if (!shootButton) console.error("ERROR: shootButton element not found after DOMContentLoaded. Check index.html IDs.");
 
-
-    // Setup mobile touch controls
+    // Set up mobile controls now that buttons are available
     setupMobileControls();
-
 });
+  
